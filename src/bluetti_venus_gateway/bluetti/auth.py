@@ -234,10 +234,10 @@ def _find_device(settings: BluettiAuthSettings, token: str, user_id: str) -> dic
 def _server_utc(settings: BluettiAuthSettings, token: str) -> tuple[int, str, str | None]:
     status, headers, body = _http_request(UTC_URL, "GET", _common_headers(settings, token), None)
     payload = _ensure_json_status("utc-time", status, body)
-    utc_time = _json_path(payload, ["data"])
+    utc_time = _coerce_int(_json_path(payload, ["data"]))
     x_signature = _header_ci(headers, "x-signature")
     iot_server = _header_ci(headers, "x-iot-server")
-    if not isinstance(utc_time, int):
+    if utc_time is None:
         raise BluettiAuthError("utc-time response did not include integer time", retryable=True)
     if not x_signature:
         raise BluettiAuthError("utc-time response did not include x-signature", retryable=True)
@@ -369,6 +369,16 @@ def _json_path(payload: Any, path: list[str]) -> Any:
             return None
         current = current[key]
     return current
+
+
+def _coerce_int(value: Any) -> int | None:
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
+    return None
 
 
 def _select_device(devices: list[dict[str, Any]], device_sn: str) -> dict[str, Any]:

@@ -1,5 +1,14 @@
 # ChangeLog
 
+## [2026-05-01 21:16] Accept BLUETTI UTC time string responses
+- Updated BLUETTI auth parsing so `/api/midppkic/cert/app/v2/now/utc-time` accepts numeric string `data` values as well as JSON integers
+- Verified on Raspberry Pi 5 that the live response shape is `code=0`, `message=OK`, and `data` as a string such as `1777630585000`
+- Added unit coverage for UTC integer coercion
+- Verified locally with:
+  - `env PYTHONPATH=src python3 -m unittest discover -s tests`
+  - `python3 -m compileall -q src`
+  - `git diff --check`
+
 ## [2026-05-01 21:07] Add live BLUETTI MQTT collector path
 - Added BLUETTI cloud auth and MQTT context preparation for the standalone gateway:
   - login token retrieval

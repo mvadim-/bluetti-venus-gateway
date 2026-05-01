@@ -4,6 +4,7 @@ import unittest
 
 from bluetti_venus_gateway.bluetti.auth import generate_totp
 from bluetti_venus_gateway.bluetti.auth import normalize_password_hash
+from bluetti_venus_gateway.bluetti.auth import _coerce_int
 
 
 class AuthTests(unittest.TestCase):
@@ -20,6 +21,10 @@ class AuthTests(unittest.TestCase):
 
     def test_generate_totp_is_stable_for_same_inputs(self) -> None:
         self.assertEqual(generate_totp("user-id", "device-id", 1710000000000), "60922689")
+
+    def test_coerce_int_accepts_numeric_utc_string(self) -> None:
+        self.assertEqual(_coerce_int("1777630585000"), 1777630585000)
+        self.assertIsNone(_coerce_int("not-a-number"))
 
 
 if __name__ == "__main__":
