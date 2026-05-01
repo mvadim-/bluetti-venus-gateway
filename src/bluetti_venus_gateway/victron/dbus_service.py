@@ -28,9 +28,22 @@ def bootstrap_velib_python_path() -> None:
                 sys.path.insert(0, candidate_str)
 
 
+def bootstrap_dbus_main_loop() -> Any | None:
+    import dbus.mainloop.glib
+
+    dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
+    try:
+        from gi.repository import GLib
+    except ImportError:
+        LOGGER.warning("GLib unavailable; D-Bus service requests may not be dispatched")
+        return None
+    return GLib.MainContext.default()
+
+
 class VenusDbusPublisher:
     def __init__(self, *, process_name: str, process_version: str, connection_name: str) -> None:
         bootstrap_velib_python_path()
+        self._main_context = bootstrap_dbus_main_loop()
         import dbus
         from vedbus import VeDbusService
 
@@ -43,6 +56,12 @@ class VenusDbusPublisher:
         self._process_version = process_version
         self._connection_name = connection_name
         self._selected_battery_service: str | None = None
+
+    def process_events(self) -> None:
+        if self._main_context is None:
+            return
+        while self._main_context.pending():
+            self._main_context.iteration(False)
 
     def publish(self, bridge_payload: dict[str, Any]) -> None:
         for service_name, values in iter_venus_service_payloads(bridge_payload):
@@ -97,4 +116,3 @@ class VenusDbusPublisher:
                 LOGGER.info("Venus settings service unavailable; battery selection deferred")
                 return
             LOGGER.exception("Failed to select Venus battery service %s", setting_value)
-

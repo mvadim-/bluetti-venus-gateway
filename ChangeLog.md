@@ -1,5 +1,13 @@
 # ChangeLog
 
+## [2026-05-01 21:37] Attach Venus D-Bus services to GLib main loop
+- Added D-Bus GLib main loop bootstrap before creating Venus `SystemBus` connections for `vedbus`
+- Added lightweight GLib event processing in the D-Bus bridge refresh loop so exported services can respond to D-Bus traffic
+- Verified locally with:
+  - `env PYTHONPATH=src python3 -m unittest discover -s tests`
+  - `python3 -m compileall -q src`
+  - `git diff --check`
+
 ## [2026-05-01 21:34] Allow BLUETTI MQTT private CA fallback
 - Added `BLUETTI_MQTT_TLS_VERIFY_SERVER` config to control MQTT server certificate verification
 - Defaulted verification to disabled because the BLUETTI broker presents a private PowerOak-issued server certificate, does not send the issuer chain, and uses a weak 1880-bit RSA leaf key that Venus OpenSSL rejects under normal CA verification

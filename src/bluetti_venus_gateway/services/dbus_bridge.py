@@ -44,6 +44,8 @@ def run(config_path: Path = DEFAULT_CONFIG_PATH) -> None:
                 last_snapshot_missing_log_at = now
         except Exception:
             LOGGER.exception("D-Bus bridge refresh failed")
+        finally:
+            publisher.process_events()
         time.sleep(2)
 
 
