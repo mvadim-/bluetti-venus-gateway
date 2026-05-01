@@ -130,16 +130,26 @@ class LiveMqttCollector:
             self._client.disconnect()
 
     def _build_client(self):
-        client = self._mqtt.Client(
-            client_id=self._context.client_id,
-            protocol=self._mqtt.MQTTv311,
-        )
+        client = self._new_mqtt_client()
         client.username_pw_set(self._context.username, refresh_mqtt_password(self._context))
         client.tls_set_context(build_ssl_context(self._context))
         client.on_connect = self._on_connect
         client.on_disconnect = self._on_disconnect
         client.on_message = self._on_message
         return client
+
+    def _new_mqtt_client(self):
+        callback_api_version = getattr(self._mqtt, "CallbackAPIVersion", None)
+        if callback_api_version is not None and hasattr(callback_api_version, "VERSION1"):
+            return self._mqtt.Client(
+                callback_api_version.VERSION1,
+                client_id=self._context.client_id,
+                protocol=self._mqtt.MQTTv311,
+            )
+        return self._mqtt.Client(
+            client_id=self._context.client_id,
+            protocol=self._mqtt.MQTTv311,
+        )
 
     def _on_connect(self, client, _userdata, _flags, rc) -> None:
         if rc != 0:

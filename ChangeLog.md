@@ -1,5 +1,10 @@
 # ChangeLog
 
+## [2026-05-01 21:24] Support paho MQTT 2 callback API
+- Updated the live collector MQTT client construction to pass `CallbackAPIVersion.VERSION1` when running on Venus OS `python3-paho-mqtt` 2.x
+- Keeps fallback construction for older paho MQTT versions that do not require callback API selection
+- Verified on Raspberry Pi 5 that auth/P12 now reaches MQTT context preparation before this paho API mismatch
+
 ## [2026-05-01 21:22] Require and use OpenSSL legacy provider for BLUETTI P12
 - Added OpenSSL legacy provider detection and `openssl pkcs12 -legacy` fallback for BLUETTI P12 key/cert extraction
 - Updated Venus installer prerequisites to require:
