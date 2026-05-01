@@ -1,5 +1,14 @@
 # ChangeLog
 
+## [2026-05-01 21:18] Add cryptography P12 extraction fallback
+- Updated BLUETTI P12 extraction so Venus OS does not require the missing OpenSSL `legacy.so` provider
+- Collector now first tries system `openssl pkcs12` without legacy provider and falls back to system `python3-cryptography` PKCS12 parsing when OpenSSL cannot export the key/cert
+- Verified on Raspberry Pi 5 that the previous blocker was OpenSSL provider lookup for `/usr/lib/ossl-modules/legacy.so`
+- Verified locally with:
+  - `env PYTHONPATH=src python3 -m unittest discover -s tests`
+  - `python3 -m compileall -q src`
+  - `git diff --check`
+
 ## [2026-05-01 21:16] Accept BLUETTI UTC time string responses
 - Updated BLUETTI auth parsing so `/api/midppkic/cert/app/v2/now/utc-time` accepts numeric string `data` values as well as JSON integers
 - Verified on Raspberry Pi 5 that the live response shape is `code=0`, `message=OK`, and `data` as a string such as `1777630585000`

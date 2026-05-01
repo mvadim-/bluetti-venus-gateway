@@ -279,26 +279,49 @@ def _extract_mqtt_tls_files(certs_dir: Path, p12_password: str) -> dict[str, Pat
     p12_path = certs_dir / "device_cert.p12"
     cert_path = certs_dir / "client.crt"
     key_path = certs_dir / "client.key"
-    _run_pkcs12(p12_path, p12_password, ["-clcerts", "-nokeys", "-out", str(cert_path)])
-    _run_pkcs12(p12_path, p12_password, ["-nocerts", "-nodes", "-out", str(key_path)])
+    cert_exported = _try_run_pkcs12(p12_path, p12_password, ["-clcerts", "-nokeys", "-out", str(cert_path)])
+    key_exported = _try_run_pkcs12(p12_path, p12_password, ["-nocerts", "-nodes", "-out", str(key_path)])
+    if not (cert_exported and key_exported):
+        _extract_mqtt_tls_files_with_cryptography(p12_path, p12_password, cert_path, key_path)
     ca_path = _default_ca_path()
     return {"cert": cert_path, "key": key_path, "ca": ca_path}
 
 
-def _run_pkcs12(p12_path: Path, password: str, extra_args: list[str]) -> None:
-    base_cmd = ["openssl", "pkcs12", "-in", str(p12_path), "-passin", "pass:" + password]
-    attempts = [
-        base_cmd + extra_args,
-        base_cmd + ["-legacy"] + extra_args,
-        base_cmd + ["-provider", "default", "-provider", "legacy"] + extra_args,
-    ]
-    stderr = ""
-    for cmd in attempts:
-        completed = subprocess.run(cmd, capture_output=True, text=True)
-        if completed.returncode == 0:
-            return
-        stderr = completed.stderr.strip()
-    raise BluettiAuthError(f"openssl pkcs12 export failed: {stderr}", retryable=False)
+def _try_run_pkcs12(p12_path: Path, password: str, extra_args: list[str]) -> bool:
+    cmd = ["openssl", "pkcs12", "-in", str(p12_path), "-passin", "pass:" + password] + extra_args
+    completed = subprocess.run(cmd, capture_output=True, text=True)
+    return completed.returncode == 0
+
+
+def _extract_mqtt_tls_files_with_cryptography(
+    p12_path: Path,
+    password: str,
+    cert_path: Path,
+    key_path: Path,
+) -> None:
+    try:
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.serialization import pkcs12
+    except ImportError as exc:
+        raise BluettiAuthError(
+            "P12 extraction failed with openssl and python3-cryptography is unavailable",
+            retryable=False,
+        ) from exc
+
+    private_key, certificate, _additional_certificates = pkcs12.load_key_and_certificates(
+        p12_path.read_bytes(),
+        password.encode("utf-8"),
+    )
+    if private_key is None or certificate is None:
+        raise BluettiAuthError("P12 did not contain a client key and certificate", retryable=False)
+    cert_path.write_bytes(certificate.public_bytes(serialization.Encoding.PEM))
+    key_path.write_bytes(
+        private_key.private_bytes(
+            serialization.Encoding.PEM,
+            serialization.PrivateFormat.TraditionalOpenSSL,
+            serialization.NoEncryption(),
+        )
+    )
 
 
 def _http_request(
