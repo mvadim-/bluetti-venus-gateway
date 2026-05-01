@@ -41,6 +41,10 @@ class GatewayConfig:
     battery_custom_name: str
     grid_custom_name: str
     acload_custom_name: str
+    auth_device_id: str
+    mqtt_client_id: str
+    mqtt_payload_format: str
+    mqtt_ciphers: str
     data_dir: Path = DEFAULT_DATA_DIR
     run_dir: Path = DEFAULT_RUN_DIR
 
@@ -110,6 +114,10 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH, env: Mapping[str, str] | None 
         battery_custom_name=merged.get("BLUETTI_BATTERY_CUSTOM_NAME", "BLUETTI EP760"),
         grid_custom_name=merged.get("BLUETTI_GRID_CUSTOM_NAME", "BLUETTI EP760 AC Input"),
         acload_custom_name=merged.get("BLUETTI_ACLOAD_CUSTOM_NAME", "BLUETTI EP760 AC Loads"),
+        auth_device_id=merged.get("BLUETTI_AUTH_DEVICE_ID", "4C12EBA9-B7B8-40DC-91D6-9A6DC81235A6"),
+        mqtt_client_id=merged.get("BLUETTI_MQTT_CLIENT_ID", "bluetti-venus-gateway"),
+        mqtt_payload_format=merged.get("BLUETTI_MQTT_PAYLOAD_FORMAT", "new"),
+        mqtt_ciphers=merged.get("BLUETTI_MQTT_CIPHERS", "DEFAULT:@SECLEVEL=0"),
         data_dir=Path(merged.get("BLUETTI_DATA_DIR", str(DEFAULT_DATA_DIR))),
         run_dir=Path(merged.get("BLUETTI_RUN_DIR", str(DEFAULT_RUN_DIR))),
     )
@@ -152,4 +160,3 @@ def _bool(raw_value: str, key: str) -> bool:
     if normalized in {"0", "false", "no", "off"}:
         return False
     raise ConfigError(f"{key} must be a boolean")
-

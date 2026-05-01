@@ -38,6 +38,8 @@ class ConfigTests(unittest.TestCase):
                 self.assertIs(config.enable_pv, True)
                 self.assertIs(config.enable_pack_diagnostics, False)
                 self.assertEqual(config.poll_interval_seconds, 7)
+                self.assertEqual(config.mqtt_client_id, "bluetti-venus-gateway")
+                self.assertEqual(config.mqtt_payload_format, "new")
 
     def test_load_config_rejects_missing_required_values(self) -> None:
         import tempfile

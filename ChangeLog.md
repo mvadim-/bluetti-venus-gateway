@@ -1,5 +1,31 @@
 # ChangeLog
 
+## [2026-05-01 21:07] Add live BLUETTI MQTT collector path
+- Added BLUETTI cloud auth and MQTT context preparation for the standalone gateway:
+  - login token retrieval
+  - user/device lookup
+  - server time and P12 download
+  - client certificate/key extraction through system `openssl`
+  - MQTT topic, broker, username, and password derivation
+- Added live paho MQTT collector behavior:
+  - connects with Venus OS system `python3-paho-mqtt`
+  - subscribes to the device `PUB/...` topic
+  - publishes Modbus read requests to the matching `SUB/...` topic
+  - uses the configured `vrm-minimal` polling profile
+  - refreshes auth periodically
+- Added minimal EP760 payload decoding for v1 VRM streams:
+  - `HOME_INFO (100)`
+  - `INV_GRID_INFO (1300)`
+  - `INV_LOAD_INFO (1400)`
+  - `INV_INVERTER_INFO (1500)`
+- Collector now writes `/run/bluetti-gateway/latest.json` from live decoded state when BLUETTI MQTT replies arrive
+- Added config keys for auth device id, MQTT client id, payload format, and ciphers
+- Added auth/parser unit coverage
+- Verified locally with:
+  - `env PYTHONPATH=src python3 -m unittest discover -s tests`
+  - `python3 -m compileall -q src`
+  - `git diff --check`
+
 ## [2026-05-01 21:02] Ignore runit supervise state in gateway repo
 - Added `venus/services/*/supervise/` to `.gitignore` because Venus runit creates per-service supervise state inside symlinked service directories
 - Verified on Raspberry Pi 5 after the config parsing fix:
