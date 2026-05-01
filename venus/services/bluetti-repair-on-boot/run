@@ -7,5 +7,7 @@ LOG_FILE="$LOG_DIR/bluetti-repair-on-boot.log"
 
 mkdir -p "$LOG_DIR"
 "$APP_DIR/venus/repair-if-needed.sh" >>"$LOG_FILE" 2>&1 || true
-exit 0
 
+# runit restarts services that exit. Keep this boot-time repair service
+# alive after the one-shot repair so Venus does not run repair in a loop.
+exec sleep 2147483647

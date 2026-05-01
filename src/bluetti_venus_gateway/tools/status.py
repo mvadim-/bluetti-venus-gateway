@@ -95,19 +95,35 @@ def _read_vrm_portal_id() -> str:
         "/data/conf/serial-starter/unique-id",
         "/etc/venus/serial-number",
     ]
-    return _read_first_existing(candidates) or "unknown"
+    value = _read_first_existing(candidates)
+    if value:
+        return value
+    get_unique_id = Path("/opt/victronenergy/serial-starter/get-unique-id")
+    if get_unique_id.exists():
+        try:
+            result = subprocess.run(
+                [str(get_unique_id)],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+        except Exception:
+            return "unknown"
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip().splitlines()[0]
+    return "unknown"
 
 
 def _read_first_existing(paths: list[str]) -> str | None:
     for raw_path in paths:
         path = Path(raw_path)
         if path.exists():
-            value = path.read_text(encoding="utf-8", errors="ignore").strip()
-            if value:
-                return value
+            for line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+                value = line.strip()
+                if value:
+                    return value
     return None
 
 
 if __name__ == "__main__":
     main()
-

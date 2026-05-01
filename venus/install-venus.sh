@@ -67,10 +67,36 @@ install_service() {
   run ln -s "$source_dir" "$target_dir"
 }
 
+wait_for_service_control() {
+  name="$1"
+  target_dir="$SERVICE_ROOT/$name"
+  attempts="${BLUETTI_SERVICE_CONTROL_WAIT_ATTEMPTS:-20}"
+  i=0
+  while [ "$i" -lt "$attempts" ]; do
+    if [ -e "$target_dir/supervise/control" ]; then
+      return 0
+    fi
+    sleep 1
+    i=$((i + 1))
+  done
+  log "service control not ready yet: $target_dir"
+  return 1
+}
+
+start_service_if_ready() {
+  name="$1"
+  if ! command -v svc >/dev/null 2>&1 || [ "$DRY_RUN" = "1" ]; then
+    return 0
+  fi
+  if wait_for_service_control "$name"; then
+    svc -u "$SERVICE_ROOT/$name" || true
+  fi
+}
+
 write_install_state() {
   version="unknown"
   if [ -f /opt/victronenergy/version ]; then
-    version="$(cat /opt/victronenergy/version)"
+    version="$(sed -n '/[^[:space:]]/{p;q;}' /opt/victronenergy/version)"
   fi
   run mkdir -p "$STATE_DIR"
   if [ "$DRY_RUN" = "1" ]; then
@@ -101,10 +127,7 @@ install_service bluetti-dbus-bridge
 install_service bluetti-repair-on-boot
 write_install_state
 
-if command -v svc >/dev/null 2>&1 && [ "$DRY_RUN" = "0" ]; then
-  svc -u "$SERVICE_ROOT/bluetti-collector" || true
-  svc -u "$SERVICE_ROOT/bluetti-dbus-bridge" || true
-fi
+start_service_if_ready bluetti-collector
+start_service_if_ready bluetti-dbus-bridge
 
 log "Install complete."
-

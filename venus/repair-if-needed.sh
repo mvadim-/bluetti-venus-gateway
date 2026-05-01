@@ -12,7 +12,7 @@ fi
 
 current_version="unknown"
 if [ -f /opt/victronenergy/version ]; then
-  current_version="$(cat /opt/victronenergy/version)"
+  current_version="$(sed -n '/[^[:space:]]/{p;q;}' /opt/victronenergy/version)"
 fi
 
 installed_version=""
@@ -25,4 +25,3 @@ if [ "$FORCE" = "1" ] || [ "$current_version" != "$installed_version" ] || [ ! -
 else
   printf 'No repair needed.\n'
 fi
-
