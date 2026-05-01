@@ -6,6 +6,8 @@
 - Normalized Venus OS version detection to the first non-empty line so multi-line `/opt/victronenergy/version` files render as a single version
 - Added VRM Portal ID fallback through `/opt/victronenergy/serial-starter/get-unique-id` with a bounded timeout
 - Updated `logs.sh` to show missing service log files explicitly
+- Parked the bootstrap collector process when no fixture source is configured so runit does not restart it repeatedly before the live BLUETTI collector is implemented
+- Rate-limited missing snapshot logs in the D-Bus bridge to once per minute
 - Added status helper coverage for multi-line version files
 - Verified with:
   - `env PYTHONPATH=src python3 -m unittest discover -s tests`

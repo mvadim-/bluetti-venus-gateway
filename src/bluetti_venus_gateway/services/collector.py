@@ -19,22 +19,18 @@ from bluetti_venus_gateway.telemetry.snapshot_store import atomic_write_json
 LOGGER = logging.getLogger(__name__)
 
 
-class CollectorNotReady(RuntimeError):
-    pass
-
-
 def run(config_path: Path = DEFAULT_CONFIG_PATH) -> None:
     config = load_config(config_path)
     configure_logging(config.log_level)
     config.run_dir.mkdir(parents=True, exist_ok=True)
-    (config.run_dir / "collector.ready").write_text(str(time.time()), encoding="utf-8")
 
     fixture_path = os.environ.get("BLUETTI_COLLECTOR_FIXTURE_JSON")
     if not fixture_path:
-        raise CollectorNotReady(
+        LOGGER.error(
             "live BLUETTI MQTT collector is not implemented in this bootstrap cycle; "
-            "set BLUETTI_COLLECTOR_FIXTURE_JSON for local bridge validation"
+            "set BLUETTI_COLLECTOR_FIXTURE_JSON for local bridge validation",
         )
+        _park_unavailable_collector()
 
     LOGGER.warning("Using fixture snapshot source: %s", fixture_path)
     while True:
@@ -50,21 +46,22 @@ def run(config_path: Path = DEFAULT_CONFIG_PATH) -> None:
             stale_after_seconds=config.stale_after_seconds,
         )
         atomic_write_json(config.snapshot_path, envelope)
+        (config.run_dir / "collector.ready").write_text(str(time.time()), encoding="utf-8")
         LOGGER.info("Wrote fixture telemetry snapshot to %s", config.snapshot_path)
         time.sleep(config.poll_interval_seconds)
+
+
+def _park_unavailable_collector() -> None:
+    while True:
+        time.sleep(3600)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)
     args = parser.parse_args()
-    try:
-        run(args.config)
-    except CollectorNotReady as exc:
-        LOGGER.error("%s", exc)
-        raise SystemExit(78) from exc
+    run(args.config)
 
 
 if __name__ == "__main__":
     main()
-

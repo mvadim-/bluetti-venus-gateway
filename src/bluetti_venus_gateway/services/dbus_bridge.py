@@ -31,12 +31,16 @@ def run(config_path: Path = DEFAULT_CONFIG_PATH) -> None:
     config.run_dir.mkdir(parents=True, exist_ok=True)
     ready_path = config.run_dir / "dbus-bridge.ready"
     ready_path.write_text(str(time.time()), encoding="utf-8")
+    last_snapshot_missing_log_at = 0.0
     while True:
         try:
             envelope = read_snapshot(config.snapshot_path)
             publisher.publish(build_venus_bridge_payload(envelope, settings=settings))
         except SnapshotStoreError as exc:
-            LOGGER.info("%s", exc)
+            now = time.monotonic()
+            if now - last_snapshot_missing_log_at >= 60:
+                LOGGER.info("%s", exc)
+                last_snapshot_missing_log_at = now
         except Exception:
             LOGGER.exception("D-Bus bridge refresh failed")
         time.sleep(2)
@@ -51,4 +55,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
