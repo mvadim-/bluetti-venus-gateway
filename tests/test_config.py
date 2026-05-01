@@ -40,6 +40,26 @@ class ConfigTests(unittest.TestCase):
                 self.assertEqual(config.poll_interval_seconds, 7)
                 self.assertEqual(config.mqtt_client_id, "bluetti-venus-gateway")
                 self.assertEqual(config.mqtt_payload_format, "new")
+                self.assertIs(config.mqtt_tls_verify_server, False)
+
+    def test_load_config_can_enable_mqtt_tls_server_verification(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "bluetti-gateway.env"
+            config_path.write_text(
+                "\n".join(
+                    [
+                        "BLUETTI_EMAIL=user@example.com",
+                        "BLUETTI_PASSWORD=secret",
+                        "BLUETTI_DEVICE_SN=EP760SN",
+                        "BLUETTI_MQTT_TLS_VERIFY_SERVER=1",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            self.assertIs(load_config(config_path).mqtt_tls_verify_server, True)
 
     def test_load_config_rejects_missing_required_values(self) -> None:
         import tempfile

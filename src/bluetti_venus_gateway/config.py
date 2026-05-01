@@ -45,6 +45,7 @@ class GatewayConfig:
     mqtt_client_id: str
     mqtt_payload_format: str
     mqtt_ciphers: str
+    mqtt_tls_verify_server: bool
     data_dir: Path = DEFAULT_DATA_DIR
     run_dir: Path = DEFAULT_RUN_DIR
 
@@ -119,6 +120,10 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH, env: Mapping[str, str] | None 
         mqtt_client_id=merged.get("BLUETTI_MQTT_CLIENT_ID", "bluetti-venus-gateway"),
         mqtt_payload_format=merged.get("BLUETTI_MQTT_PAYLOAD_FORMAT", "new"),
         mqtt_ciphers=merged.get("BLUETTI_MQTT_CIPHERS", "DEFAULT:@SECLEVEL=0"),
+        mqtt_tls_verify_server=_bool(
+            merged.get("BLUETTI_MQTT_TLS_VERIFY_SERVER", "0"),
+            "BLUETTI_MQTT_TLS_VERIFY_SERVER",
+        ),
         data_dir=Path(merged.get("BLUETTI_DATA_DIR", str(DEFAULT_DATA_DIR))),
         run_dir=Path(merged.get("BLUETTI_RUN_DIR", str(DEFAULT_RUN_DIR))),
     )

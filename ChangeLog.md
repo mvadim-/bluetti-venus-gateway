@@ -1,5 +1,16 @@
 # ChangeLog
 
+## [2026-05-01 21:34] Allow BLUETTI MQTT private CA fallback
+- Added `BLUETTI_MQTT_TLS_VERIFY_SERVER` config to control MQTT server certificate verification
+- Defaulted verification to disabled because the BLUETTI broker presents a private PowerOak-issued server certificate, does not send the issuer chain, and uses a weak 1880-bit RSA leaf key that Venus OpenSSL rejects under normal CA verification
+- Kept TLS 1.2, configured ciphers, and client certificate authentication enabled when server verification is disabled
+- Added config unit coverage for the new switch
+- Verified locally with:
+  - `env PYTHONPATH=src python3 -m unittest discover -s tests`
+  - `python3 -m compileall -q src`
+  - `bash -n venus/install-venus.sh venus/update-venus.sh venus/repair-if-needed.sh venus/status.sh venus/restart.sh venus/logs.sh venus/uninstall-venus.sh venus/build-offline-bundle.sh venus/services/bluetti-collector/run venus/services/bluetti-dbus-bridge/run venus/services/bluetti-repair-on-boot/run`
+  - `git diff --check`
+
 ## [2026-05-01 21:29] Use BLUETTI P12 CA chain for MQTT TLS
 - Updated BLUETTI P12 extraction to export `ca.crt` from the certificate bundle in addition to `client.crt` and `client.key`
 - Collector TLS now prefers the extracted non-empty `ca.crt` for MQTT broker verification and falls back to system CA only when no P12 CA chain is available

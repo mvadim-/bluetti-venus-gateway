@@ -204,6 +204,7 @@ def _auth_settings_from_config(config: GatewayConfig) -> BluettiAuthSettings:
         certs_dir=config.certs_dir,
         mqtt_client_id=config.mqtt_client_id,
         mqtt_ciphers=config.mqtt_ciphers,
+        mqtt_tls_verify_server=config.mqtt_tls_verify_server,
     )
 
 

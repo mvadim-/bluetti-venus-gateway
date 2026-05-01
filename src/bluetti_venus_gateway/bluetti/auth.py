@@ -53,6 +53,7 @@ class BluettiAuthSettings:
     certs_dir: Path
     mqtt_client_id: str
     mqtt_ciphers: str
+    mqtt_tls_verify_server: bool
     pass_open: str = DEFAULT_PASS_OPEN
     x_os: str = DEFAULT_X_OS
     x_app_ver: str = DEFAULT_X_APP_VER
@@ -77,6 +78,7 @@ class BluettiMqttContext:
     key_path: Path
     ca_path: Path | None
     mqtt_ciphers: str
+    mqtt_tls_verify_server: bool
     modbus_slave: int
     device_sn: str
     device_model: str | None
@@ -137,6 +139,7 @@ def prepare_mqtt_context(settings: BluettiAuthSettings) -> BluettiMqttContext:
         key_path=tls_files["key"],
         ca_path=tls_files["ca"],
         mqtt_ciphers=settings.mqtt_ciphers,
+        mqtt_tls_verify_server=settings.mqtt_tls_verify_server,
         modbus_slave=0 if device_model == "PBOX" else 1,
         device_sn=_pick_string(device, "sn") or settings.device_sn,
         device_model=device_model,
@@ -162,6 +165,9 @@ def build_ssl_context(context: BluettiMqttContext) -> ssl.SSLContext:
     ssl_context = ssl.create_default_context(cafile=str(context.ca_path) if context.ca_path else None)
     ssl_context.minimum_version = ssl.TLSVersion.TLSv1_2
     ssl_context.set_ciphers(context.mqtt_ciphers)
+    if not context.mqtt_tls_verify_server:
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
     ssl_context.load_cert_chain(str(context.cert_path), str(context.key_path))
     return ssl_context
 
