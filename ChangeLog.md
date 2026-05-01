@@ -1,5 +1,13 @@
 # ChangeLog
 
+## [2026-05-01 21:02] Ignore runit supervise state in gateway repo
+- Added `venus/services/*/supervise/` to `.gitignore` because Venus runit creates per-service supervise state inside symlinked service directories
+- Verified on Raspberry Pi 5 after the config parsing fix:
+  - `bluetti-collector` and `bluetti-dbus-bridge` run as Python module processes
+  - `dbus-bridge.ready` is created
+  - collector and D-Bus bridge logs are written
+  - missing snapshot and missing D-Bus services remain expected until live collector or fixture telemetry is enabled
+
 ## [2026-05-01 20:59] Fix Venus service config parsing under runit
 - Removed shell sourcing of `/data/bluetti-gateway/bluetti-gateway.env` from `bluetti-collector` and `bluetti-dbus-bridge` run scripts
 - Kept config parsing inside Python so values with spaces such as `BLUETTI EP760` do not break runit startup
