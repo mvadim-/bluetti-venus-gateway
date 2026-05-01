@@ -9,15 +9,8 @@ LOG_FILE="$LOG_DIR/bluetti-collector.log"
 
 mkdir -p "$LOG_DIR" "$DATA_DIR/cache" "$DATA_DIR/certs" /run/bluetti-gateway
 
-if [ -f "$CONFIG_FILE" ]; then
-  set -a
-  . "$CONFIG_FILE"
-  set +a
-fi
-
 export PYTHONPATH="$APP_DIR/src:${PYTHONPATH:-}"
 export BLUETTI_DATA_DIR="$DATA_DIR"
 export BLUETTI_RUN_DIR="${BLUETTI_RUN_DIR:-/run/bluetti-gateway}"
 
 exec python3 -m bluetti_venus_gateway.services.collector --config "$CONFIG_FILE" >>"$LOG_FILE" 2>&1
-

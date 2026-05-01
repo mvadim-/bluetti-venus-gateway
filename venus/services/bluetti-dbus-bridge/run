@@ -9,16 +9,9 @@ LOG_FILE="$LOG_DIR/bluetti-dbus-bridge.log"
 
 mkdir -p "$LOG_DIR" /run/bluetti-gateway
 
-if [ -f "$CONFIG_FILE" ]; then
-  set -a
-  . "$CONFIG_FILE"
-  set +a
-fi
-
 export PYTHONPATH="$APP_DIR/src:${PYTHONPATH:-}"
 export BLUETTI_DATA_DIR="$DATA_DIR"
 export BLUETTI_RUN_DIR="${BLUETTI_RUN_DIR:-/run/bluetti-gateway}"
 export DBUS_SYSTEM_BUS_ADDRESS="${DBUS_SYSTEM_BUS_ADDRESS:-unix:path=/var/run/dbus/system_bus_socket}"
 
 exec python3 -m bluetti_venus_gateway.services.dbus_bridge --config "$CONFIG_FILE" >>"$LOG_FILE" 2>&1
-

@@ -1,5 +1,15 @@
 # ChangeLog
 
+## [2026-05-01 20:59] Fix Venus service config parsing under runit
+- Removed shell sourcing of `/data/bluetti-gateway/bluetti-gateway.env` from `bluetti-collector` and `bluetti-dbus-bridge` run scripts
+- Kept config parsing inside Python so values with spaces such as `BLUETTI EP760` do not break runit startup
+- Quoted custom-name values in the example config for safer manual shell usage
+- Verified on Raspberry Pi 5 that the previous failure came from `readproctitle service errors` reporting `bluetti-gateway.env: line 21: EP760`
+- Verified locally with:
+  - `env PYTHONPATH=src python3 -m unittest discover -s tests`
+  - `python3 -m compileall -q src`
+  - `bash -n venus/install-venus.sh venus/update-venus.sh venus/repair-if-needed.sh venus/status.sh venus/restart.sh venus/logs.sh venus/uninstall-venus.sh venus/build-offline-bundle.sh venus/services/bluetti-collector/run venus/services/bluetti-dbus-bridge/run venus/services/bluetti-repair-on-boot/run`
+
 ## [2026-05-01 20:54] Improve Venus gateway service diagnostics
 - Updated `install-venus.sh` to create empty collector, D-Bus bridge, and repair log files during install so `logs.sh` has deterministic targets immediately after service registration
 - Updated `status.sh` service reporting to include the raw `svstat` summary for gateway services and `vrmlogger`
