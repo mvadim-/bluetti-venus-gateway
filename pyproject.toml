@@ -1,0 +1,13 @@
+[project]
+name = "bluetti-venus-gateway"
+version = "0.1.0"
+description = "Native Venus OS gateway for BLUETTI power stations"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+bluetti-collector = "bluetti_venus_gateway.services.collector:main"
+bluetti-dbus-bridge = "bluetti_venus_gateway.services.dbus_bridge:main"
+bluetti-gateway-status = "bluetti_venus_gateway.tools.status:main"
+bluetti-gateway-smoke-test = "bluetti_venus_gateway.tools.smoke_test:main"

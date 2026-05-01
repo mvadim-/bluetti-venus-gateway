@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# BLUETTI Venus Gateway local runtime
+bluetti-gateway.env
+certs/
+cache/
+logs/
+*.tar.gz
