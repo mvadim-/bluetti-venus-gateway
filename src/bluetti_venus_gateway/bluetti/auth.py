@@ -279,6 +279,9 @@ def _extract_mqtt_tls_files(certs_dir: Path, p12_password: str) -> dict[str, Pat
     p12_path = certs_dir / "device_cert.p12"
     cert_path = certs_dir / "client.crt"
     key_path = certs_dir / "client.key"
+    ca_path = certs_dir / "ca.crt"
+    for output_path in (cert_path, key_path, ca_path):
+        _unlink_if_exists(output_path)
     cert_exported = _try_run_pkcs12_with_fallbacks(
         p12_path,
         p12_password,
@@ -289,10 +292,16 @@ def _extract_mqtt_tls_files(certs_dir: Path, p12_password: str) -> dict[str, Pat
         p12_password,
         ["-nocerts", "-nodes", "-out", str(key_path)],
     )
-    if not (cert_exported and key_exported):
-        _extract_mqtt_tls_files_with_cryptography(p12_path, p12_password, cert_path, key_path)
-    ca_path = _default_ca_path()
-    return {"cert": cert_path, "key": key_path, "ca": ca_path}
+    _try_run_pkcs12_with_fallbacks(
+        p12_path,
+        p12_password,
+        ["-cacerts", "-nokeys", "-out", str(ca_path)],
+    )
+    if not (cert_exported and key_exported and _path_is_nonempty(cert_path) and _path_is_nonempty(key_path)):
+        _extract_mqtt_tls_files_with_cryptography(p12_path, p12_password, cert_path, key_path, ca_path)
+    elif not _path_is_nonempty(ca_path):
+        _try_extract_ca_with_cryptography(p12_path, p12_password, ca_path)
+    return {"cert": cert_path, "key": key_path, "ca": _path_or_default_ca(ca_path)}
 
 
 def _try_run_pkcs12_with_fallbacks(p12_path: Path, password: str, extra_args: list[str]) -> bool:
@@ -318,6 +327,7 @@ def _extract_mqtt_tls_files_with_cryptography(
     password: str,
     cert_path: Path,
     key_path: Path,
+    ca_path: Path,
 ) -> None:
     try:
         from cryptography.hazmat.primitives import serialization
@@ -328,7 +338,7 @@ def _extract_mqtt_tls_files_with_cryptography(
             retryable=False,
         ) from exc
 
-    private_key, certificate, _additional_certificates = pkcs12.load_key_and_certificates(
+    private_key, certificate, additional_certificates = pkcs12.load_key_and_certificates(
         p12_path.read_bytes(),
         password.encode("utf-8"),
     )
@@ -342,6 +352,53 @@ def _extract_mqtt_tls_files_with_cryptography(
             serialization.NoEncryption(),
         )
     )
+    _write_additional_ca_certificates(ca_path, additional_certificates, serialization)
+
+
+def _try_extract_ca_with_cryptography(p12_path: Path, password: str, ca_path: Path) -> bool:
+    try:
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives.serialization import pkcs12
+    except ImportError:
+        return False
+
+    try:
+        _private_key, _certificate, additional_certificates = pkcs12.load_key_and_certificates(
+            p12_path.read_bytes(),
+            password.encode("utf-8"),
+        )
+    except Exception:
+        return False
+    return _write_additional_ca_certificates(ca_path, additional_certificates, serialization)
+
+
+def _write_additional_ca_certificates(ca_path: Path, additional_certificates: object, serialization: object) -> bool:
+    if not additional_certificates:
+        return False
+    ca_path.write_bytes(
+        b"".join(certificate.public_bytes(serialization.Encoding.PEM) for certificate in additional_certificates)
+    )
+    return _path_is_nonempty(ca_path)
+
+
+def _path_or_default_ca(candidate: Path) -> Path | None:
+    if _path_is_nonempty(candidate):
+        return candidate
+    return _default_ca_path()
+
+
+def _path_is_nonempty(path: Path) -> bool:
+    try:
+        return path.stat().st_size > 0
+    except OSError:
+        return False
+
+
+def _unlink_if_exists(path: Path) -> None:
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        pass
 
 
 def _http_request(

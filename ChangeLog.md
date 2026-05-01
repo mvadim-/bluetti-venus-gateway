@@ -1,5 +1,15 @@
 # ChangeLog
 
+## [2026-05-01 21:29] Use BLUETTI P12 CA chain for MQTT TLS
+- Updated BLUETTI P12 extraction to export `ca.crt` from the certificate bundle in addition to `client.crt` and `client.key`
+- Collector TLS now prefers the extracted non-empty `ca.crt` for MQTT broker verification and falls back to system CA only when no P12 CA chain is available
+- Removed stale TLS export artifacts before each extraction so a replaced P12 cannot reuse an old CA/key/cert file
+- Added unit coverage for preferring an extracted CA file
+- Verified locally with:
+  - `env PYTHONPATH=src python3 -m unittest discover -s tests`
+  - `python3 -m compileall -q src`
+  - `git diff --check`
+
 ## [2026-05-01 21:24] Support paho MQTT 2 callback API
 - Updated the live collector MQTT client construction to pass `CallbackAPIVersion.VERSION1` when running on Venus OS `python3-paho-mqtt` 2.x
 - Keeps fallback construction for older paho MQTT versions that do not require callback API selection

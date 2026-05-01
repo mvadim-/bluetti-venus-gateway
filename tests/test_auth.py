@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from pathlib import Path
+import tempfile
 import unittest
 
 from bluetti_venus_gateway.bluetti.auth import generate_totp
 from bluetti_venus_gateway.bluetti.auth import normalize_password_hash
 from bluetti_venus_gateway.bluetti.auth import _coerce_int
+from bluetti_venus_gateway.bluetti.auth import _path_or_default_ca
 from bluetti_venus_gateway.bluetti.auth import _try_run_pkcs12_with_fallbacks
 
 
@@ -28,7 +31,14 @@ class AuthTests(unittest.TestCase):
         self.assertIsNone(_coerce_int("not-a-number"))
 
     def test_pkcs12_fallback_runner_returns_false_for_missing_file(self) -> None:
-        self.assertFalse(_try_run_pkcs12_with_fallbacks(__import__("pathlib").Path("/missing.p12"), "secret", []))
+        self.assertFalse(_try_run_pkcs12_with_fallbacks(Path("/missing.p12"), "secret", []))
+
+    def test_path_or_default_ca_prefers_nonempty_extracted_ca(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            ca_path = Path(directory) / "ca.crt"
+            ca_path.write_text("certificate", encoding="utf-8")
+
+            self.assertEqual(_path_or_default_ca(ca_path), ca_path)
 
 
 if __name__ == "__main__":
