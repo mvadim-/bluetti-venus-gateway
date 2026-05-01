@@ -331,7 +331,12 @@ def _ensure_json_status(step: str, status: int, body: bytes) -> Any:
         message = str(payload.get("message") or payload.get("msg") or payload.get("error") or "")
         code = payload.get("code")
     message_lower = message.lower()
-    if code == 20003015 or "incorrect" in message_lower or "password" in message_lower:
+    if (
+        code in {20003015, 20003006}
+        or "incorrect" in message_lower
+        or "password" in message_lower
+        or "account does not exist" in message_lower
+    ):
         retryable = False
     raise BluettiAuthError(f"{step} failed with status {status}, code={code}", retryable=retryable)
 
@@ -480,4 +485,3 @@ def _default_ca_path() -> Path | None:
     if openssl:
         return None
     return None
-

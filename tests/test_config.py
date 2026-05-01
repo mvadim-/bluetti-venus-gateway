@@ -51,6 +51,25 @@ class ConfigTests(unittest.TestCase):
             with self.assertRaisesRegex(ConfigError, "BLUETTI_PASSWORD"):
                 load_config(config_path)
 
+    def test_load_config_rejects_template_values(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "bluetti-gateway.env"
+            config_path.write_text(
+                "\n".join(
+                    [
+                        "BLUETTI_EMAIL=your-email@example.com",
+                        "BLUETTI_PASSWORD=your-password",
+                        "BLUETTI_DEVICE_SN=your-device-sn",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            with self.assertRaisesRegex(ConfigError, "replace template"):
+                load_config(config_path)
+
     def test_parse_env_file_strips_quotes(self) -> None:
         import tempfile
 

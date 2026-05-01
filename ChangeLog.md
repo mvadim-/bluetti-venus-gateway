@@ -20,6 +20,9 @@
   - `INV_INVERTER_INFO (1500)`
 - Collector now writes `/run/bluetti-gateway/latest.json` from live decoded state when BLUETTI MQTT replies arrive
 - Added config keys for auth device id, MQTT client id, payload format, and ciphers
+- Added validation for untouched template credentials/device serial values after Raspberry Pi testing confirmed the current Pi config still contains placeholders
+- Collector and D-Bus bridge now park with a clear log message on invalid config instead of crash-looping under runit
+- BLUETTI `account does not exist` login responses are classified as non-retryable auth failures
 - Added auth/parser unit coverage
 - Verified locally with:
   - `env PYTHONPATH=src python3 -m unittest discover -s tests`

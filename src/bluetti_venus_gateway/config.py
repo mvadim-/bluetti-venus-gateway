@@ -94,6 +94,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH, env: Mapping[str, str] | None 
     ]
     if missing:
         raise ConfigError("missing required config keys: " + ", ".join(missing))
+    _reject_template_values(merged)
 
     return GatewayConfig(
         environment=merged.get("BLUETTI_GATEWAY_ENV", "production"),
@@ -134,6 +135,17 @@ def _strip_optional_quotes(value: str) -> str:
     if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
         return value[1:-1]
     return value
+
+
+def _reject_template_values(values: Mapping[str, str]) -> None:
+    placeholders = {
+        "BLUETTI_EMAIL": "your-email@example.com",
+        "BLUETTI_PASSWORD": "your-password",
+        "BLUETTI_DEVICE_SN": "your-device-sn",
+    }
+    invalid = [key for key, placeholder in placeholders.items() if values.get(key) == placeholder]
+    if invalid:
+        raise ConfigError("replace template config values: " + ", ".join(invalid))
 
 
 def _positive_int(raw_value: str, key: str) -> int:

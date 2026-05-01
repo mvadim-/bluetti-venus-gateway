@@ -22,6 +22,7 @@ from bluetti_venus_gateway.bluetti.parser import normalize_decoded_state
 from bluetti_venus_gateway.bluetti.polling import build_poll_profile
 from bluetti_venus_gateway.bluetti.polling import due_polls
 from bluetti_venus_gateway.config import DEFAULT_CONFIG_PATH
+from bluetti_venus_gateway.config import ConfigError
 from bluetti_venus_gateway.config import GatewayConfig
 from bluetti_venus_gateway.config import load_config
 from bluetti_venus_gateway.logging import configure_logging
@@ -206,7 +207,12 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG_PATH)
     args = parser.parse_args()
-    run(args.config)
+    try:
+        run(args.config)
+    except ConfigError as exc:
+        logging.basicConfig(level=logging.ERROR, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+        LOGGER.error("Invalid gateway config: %s", exc)
+        _park_unavailable_collector("invalid gateway config")
 
 
 if __name__ == "__main__":
