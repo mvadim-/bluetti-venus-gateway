@@ -5,6 +5,7 @@ import unittest
 from bluetti_venus_gateway.bluetti.auth import generate_totp
 from bluetti_venus_gateway.bluetti.auth import normalize_password_hash
 from bluetti_venus_gateway.bluetti.auth import _coerce_int
+from bluetti_venus_gateway.bluetti.auth import _try_run_pkcs12_with_fallbacks
 
 
 class AuthTests(unittest.TestCase):
@@ -25,6 +26,9 @@ class AuthTests(unittest.TestCase):
     def test_coerce_int_accepts_numeric_utc_string(self) -> None:
         self.assertEqual(_coerce_int("1777630585000"), 1777630585000)
         self.assertIsNone(_coerce_int("not-a-number"))
+
+    def test_pkcs12_fallback_runner_returns_false_for_missing_file(self) -> None:
+        self.assertFalse(_try_run_pkcs12_with_fallbacks(__import__("pathlib").Path("/missing.p12"), "secret", []))
 
 
 if __name__ == "__main__":

@@ -279,18 +279,38 @@ def _extract_mqtt_tls_files(certs_dir: Path, p12_password: str) -> dict[str, Pat
     p12_path = certs_dir / "device_cert.p12"
     cert_path = certs_dir / "client.crt"
     key_path = certs_dir / "client.key"
-    cert_exported = _try_run_pkcs12(p12_path, p12_password, ["-clcerts", "-nokeys", "-out", str(cert_path)])
-    key_exported = _try_run_pkcs12(p12_path, p12_password, ["-nocerts", "-nodes", "-out", str(key_path)])
+    cert_exported = _try_run_pkcs12_with_fallbacks(
+        p12_path,
+        p12_password,
+        ["-clcerts", "-nokeys", "-out", str(cert_path)],
+    )
+    key_exported = _try_run_pkcs12_with_fallbacks(
+        p12_path,
+        p12_password,
+        ["-nocerts", "-nodes", "-out", str(key_path)],
+    )
     if not (cert_exported and key_exported):
         _extract_mqtt_tls_files_with_cryptography(p12_path, p12_password, cert_path, key_path)
     ca_path = _default_ca_path()
     return {"cert": cert_path, "key": key_path, "ca": ca_path}
 
 
+def _try_run_pkcs12_with_fallbacks(p12_path: Path, password: str, extra_args: list[str]) -> bool:
+    if _try_run_pkcs12(p12_path, password, extra_args):
+        return True
+    if _openssl_legacy_provider_available():
+        return _try_run_pkcs12(p12_path, password, ["-legacy"] + extra_args)
+    return False
+
+
 def _try_run_pkcs12(p12_path: Path, password: str, extra_args: list[str]) -> bool:
     cmd = ["openssl", "pkcs12", "-in", str(p12_path), "-passin", "pass:" + password] + extra_args
     completed = subprocess.run(cmd, capture_output=True, text=True)
     return completed.returncode == 0
+
+
+def _openssl_legacy_provider_available() -> bool:
+    return Path("/usr/lib/ossl-modules/legacy.so").exists()
 
 
 def _extract_mqtt_tls_files_with_cryptography(

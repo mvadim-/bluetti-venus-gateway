@@ -50,6 +50,11 @@ check_prerequisites() {
   require_python_import dbus || missing=1
   require_python_import gi || missing=1
   require_python_import paho.mqtt.client || missing=1
+  require_python_import cryptography || missing=1
+  if [ ! -f /usr/lib/ossl-modules/legacy.so ]; then
+    log "missing required OpenSSL legacy provider: install opkg package openssl-ossl-module-legacy"
+    missing=1
+  fi
   if [ "$missing" = "1" ]; then
     log "Install missing Venus OS/opkg prerequisites before continuing."
     exit 1

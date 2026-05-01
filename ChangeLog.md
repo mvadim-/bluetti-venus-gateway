@@ -1,5 +1,16 @@
 # ChangeLog
 
+## [2026-05-01 21:22] Require and use OpenSSL legacy provider for BLUETTI P12
+- Added OpenSSL legacy provider detection and `openssl pkcs12 -legacy` fallback for BLUETTI P12 key/cert extraction
+- Updated Venus installer prerequisites to require:
+  - Python `cryptography`
+  - `/usr/lib/ossl-modules/legacy.so` from opkg package `openssl-ossl-module-legacy`
+- Added unit coverage for the PKCS12 fallback runner
+- Verified locally with:
+  - `env PYTHONPATH=src python3 -m unittest discover -s tests`
+  - `python3 -m compileall -q src`
+  - `bash -n venus/install-venus.sh venus/update-venus.sh venus/repair-if-needed.sh venus/status.sh venus/restart.sh venus/logs.sh venus/uninstall-venus.sh venus/build-offline-bundle.sh venus/services/bluetti-collector/run venus/services/bluetti-dbus-bridge/run venus/services/bluetti-repair-on-boot/run`
+
 ## [2026-05-01 21:18] Add cryptography P12 extraction fallback
 - Updated BLUETTI P12 extraction so Venus OS does not require the missing OpenSSL `legacy.so` provider
 - Collector now first tries system `openssl pkcs12` without legacy provider and falls back to system `python3-cryptography` PKCS12 parsing when OpenSSL cannot export the key/cert
