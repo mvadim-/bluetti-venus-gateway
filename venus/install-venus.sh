@@ -114,6 +114,7 @@ EOF
 log "Installing BLUETTI Venus Gateway from $APP_DIR"
 check_prerequisites
 run mkdir -p "$DATA_DIR" "$DATA_DIR/cache" "$DATA_DIR/certs" "$DATA_DIR/logs" "$STATE_DIR" "$RUN_DIR"
+run touch "$DATA_DIR/logs/bluetti-collector.log" "$DATA_DIR/logs/bluetti-dbus-bridge.log" "$DATA_DIR/logs/bluetti-repair-on-boot.log"
 if [ ! -f "$CONFIG_FILE" ]; then
   run cp "$APP_DIR/venus/config/bluetti-gateway.env.example" "$CONFIG_FILE"
   run chmod 600 "$CONFIG_FILE"

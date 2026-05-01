@@ -34,8 +34,12 @@ def render_status(config_path: Path = DEFAULT_CONFIG_PATH) -> str:
 
     lines.append(f"bluetti-collector: {_service_state('bluetti-collector')}")
     lines.append(f"bluetti-dbus-bridge: {_service_state('bluetti-dbus-bridge')}")
-    lines.append(f"bluetti-repair-on-boot: {'installed' if Path('/service/bluetti-repair-on-boot').exists() else 'missing'}")
+    lines.append(f"bluetti-repair-on-boot: {_service_state('bluetti-repair-on-boot')}")
     lines.append(f"vrmlogger: {_service_state('vrmlogger')}")
+    lines.append(f"collector ready file: {_file_state(config.run_dir / 'collector.ready')}")
+    lines.append(f"dbus bridge ready file: {_file_state(config.run_dir / 'dbus-bridge.ready')}")
+    lines.append(f"collector log: {_file_state(config.logs_dir / 'bluetti-collector.log')}")
+    lines.append(f"dbus bridge log: {_file_state(config.logs_dir / 'bluetti-dbus-bridge.log')}")
     lines.append(_snapshot_status(config.snapshot_path))
     lines.append(f"D-Bus battery service: {_dbus_has_name('com.victronenergy.battery.ep760_' + str(config.battery_device_instance))}")
     lines.append(f"D-Bus grid service: {_dbus_has_name('com.victronenergy.grid.ep760_' + str(config.grid_device_instance))}")
@@ -63,9 +67,19 @@ def _service_state(name: str) -> str:
         if result.returncode == 0:
             output = result.stdout.strip()
             if " up " in f" {output} " or output.endswith(" up"):
-                return "running"
-            return output or "installed"
+                return f"running ({output})"
+            return f"not running ({output})" if output else "installed"
     return "installed"
+
+
+def _file_state(path: Path) -> str:
+    if not path.exists():
+        return "missing"
+    try:
+        size = path.stat().st_size
+    except OSError:
+        return "present"
+    return f"present ({size} bytes)"
 
 
 def _dbus_has_name(name: str) -> str:
@@ -98,8 +112,16 @@ def _read_vrm_portal_id() -> str:
     value = _read_first_existing(candidates)
     if value:
         return value
-    get_unique_id = Path("/opt/victronenergy/serial-starter/get-unique-id")
-    if get_unique_id.exists():
+    get_unique_id_paths = [
+        Path("/sbin/get-unique-id"),
+        Path("/opt/victronenergy/serial-starter/get-unique-id"),
+    ]
+    which_get_unique_id = shutil.which("get-unique-id")
+    if which_get_unique_id:
+        get_unique_id_paths.append(Path(which_get_unique_id))
+    for get_unique_id in get_unique_id_paths:
+        if not get_unique_id.exists():
+            continue
         try:
             result = subprocess.run(
                 [str(get_unique_id)],

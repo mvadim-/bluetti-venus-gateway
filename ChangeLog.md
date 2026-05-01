@@ -1,5 +1,17 @@
 # ChangeLog
 
+## [2026-05-01 20:54] Improve Venus gateway service diagnostics
+- Updated `install-venus.sh` to create empty collector, D-Bus bridge, and repair log files during install so `logs.sh` has deterministic targets immediately after service registration
+- Updated `status.sh` service reporting to include the raw `svstat` summary for gateway services and `vrmlogger`
+- Changed repair status from a simple installed check to the same service-state reporting as collector and D-Bus bridge
+- Added status lines for collector/D-Bus ready files and log file presence/size
+- Added VRM Portal ID fallback through `/sbin/get-unique-id` and `PATH` lookup before returning `unknown`
+- Added status helper coverage for file state output
+- Verified with:
+  - `env PYTHONPATH=src python3 -m unittest discover -s tests`
+  - `python3 -m compileall -q src`
+  - `bash -n venus/install-venus.sh venus/update-venus.sh venus/repair-if-needed.sh venus/status.sh venus/restart.sh venus/logs.sh venus/uninstall-venus.sh venus/build-offline-bundle.sh venus/services/bluetti-collector/run venus/services/bluetti-dbus-bridge/run venus/services/bluetti-repair-on-boot/run`
+
 ## [2026-05-01 20:49] Fix Venus runit repair loop and status output
 - Fixed `bluetti-repair-on-boot` so the one-shot repair runs once per service start and then stays alive with a long sleep instead of exiting and being restarted repeatedly by runit
 - Updated `install-venus.sh` to wait for each new service's `supervise/control` file before calling `svc -u`, avoiding immediate `svc: file does not exist` warnings after symlink creation
