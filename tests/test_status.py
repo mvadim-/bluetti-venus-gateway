@@ -6,6 +6,7 @@ import unittest
 
 from bluetti_venus_gateway.tools.status import _read_first_existing
 from bluetti_venus_gateway.tools.status import _file_state
+from bluetti_venus_gateway.tools.status import _svstat_is_up
 
 
 class StatusTests(unittest.TestCase):
@@ -23,6 +24,10 @@ class StatusTests(unittest.TestCase):
             self.assertEqual(_file_state(log_path), "missing")
             log_path.write_text("abc", encoding="utf-8")
             self.assertEqual(_file_state(log_path), "present (3 bytes)")
+
+    def test_svstat_is_up_does_not_treat_normally_up_as_running(self) -> None:
+        self.assertTrue(_svstat_is_up("/service/bluetti-collector: up (pid 123) 5 seconds"))
+        self.assertFalse(_svstat_is_up("/service/bluetti-collector: down 35 seconds, normally up"))
 
 
 if __name__ == "__main__":

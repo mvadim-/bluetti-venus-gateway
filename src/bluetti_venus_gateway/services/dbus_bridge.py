@@ -12,6 +12,7 @@ from bluetti_venus_gateway.config import load_config
 from bluetti_venus_gateway.logging import configure_logging
 from bluetti_venus_gateway.telemetry.snapshot_store import SnapshotStoreError
 from bluetti_venus_gateway.telemetry.snapshot_store import read_snapshot
+from bluetti_venus_gateway.telemetry.core import refresh_snapshot_freshness
 from bluetti_venus_gateway.victron.bridge_model import build_venus_bridge_payload
 from bluetti_venus_gateway.victron.bridge_model import settings_from_gateway_config
 from bluetti_venus_gateway.victron.dbus_service import VenusDbusPublisher
@@ -35,7 +36,10 @@ def run(config_path: Path = DEFAULT_CONFIG_PATH) -> None:
     last_snapshot_missing_log_at = 0.0
     while True:
         try:
-            envelope = read_snapshot(config.snapshot_path)
+            envelope = refresh_snapshot_freshness(
+                read_snapshot(config.snapshot_path),
+                stale_after_seconds=config.stale_after_seconds,
+            )
             publisher.publish(build_venus_bridge_payload(envelope, settings=settings))
         except SnapshotStoreError as exc:
             now = time.monotonic()

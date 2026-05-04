@@ -1,5 +1,17 @@
 # ChangeLog
 
+## [2026-05-04 16:21] Mark D-Bus services stale when collector stops
+- Fixed D-Bus bridge stale behavior found during Raspberry Pi Task 13 validation:
+  - bridge now recalculates snapshot freshness from `received_at` on every publish cycle
+  - Battery, Grid, AC Load, and optional VE.Bus services are marked `/Connected = 0` after `BLUETTI_STALE_AFTER_SECONDS`
+- Added `stale_after_seconds` to snapshot envelopes for diagnostics
+- Fixed `status.sh` service parsing so `svstat` output like `down ..., normally up` reports as not running
+- Added unit coverage for refreshed stale freshness and `svstat` parsing
+- Verified locally with:
+  - `env PYTHONPATH=src python3 -m unittest discover -s tests`
+  - `python3 -m compileall -q src`
+  - `git diff --check`
+
 ## [2026-05-04 15:57] Record local pre-hardware validation
 - Added `docs/validation/20260504-local-pre-hardware.md` with Task 12 validation evidence
 - Marked Task 12 complete in the copied implementation plan

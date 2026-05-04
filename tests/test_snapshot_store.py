@@ -8,6 +8,7 @@ import tempfile
 import unittest
 
 from bluetti_venus_gateway.telemetry.core import build_snapshot_envelope
+from bluetti_venus_gateway.telemetry.core import refresh_snapshot_freshness
 from bluetti_venus_gateway.telemetry.snapshot_store import atomic_write_json
 from bluetti_venus_gateway.telemetry.snapshot_store import read_snapshot
 
@@ -35,6 +36,7 @@ class SnapshotStoreTests(unittest.TestCase):
         self.assertEqual(envelope["schema_version"], 1)
         self.assertEqual(envelope["device_sn"], "EP760SN")
         self.assertEqual(envelope["freshness"], {"state": "fresh", "age_seconds": 5.0})
+        self.assertEqual(envelope["stale_after_seconds"], 20)
         self.assertEqual(envelope["snapshot"], {"soc": 76})
 
     def test_build_snapshot_envelope_marks_stale(self) -> None:
@@ -47,6 +49,23 @@ class SnapshotStoreTests(unittest.TestCase):
         )
 
         self.assertEqual(envelope["freshness"]["state"], "stale")
+
+    def test_refresh_snapshot_freshness_marks_old_snapshot_stale(self) -> None:
+        envelope = build_snapshot_envelope(
+            device_sn="EP760SN",
+            snapshot={"soc": 76},
+            observed_at=datetime(2026, 5, 1, 12, 0, 0, tzinfo=timezone.utc),
+            received_at=datetime(2026, 5, 1, 12, 0, 0, tzinfo=timezone.utc),
+            stale_after_seconds=20,
+        )
+
+        refreshed = refresh_snapshot_freshness(
+            envelope,
+            now=datetime(2026, 5, 1, 12, 0, 25, tzinfo=timezone.utc),
+            stale_after_seconds=20,
+        )
+
+        self.assertEqual(refreshed["freshness"], {"state": "stale", "age_seconds": 25.0})
 
 
 if __name__ == "__main__":

@@ -66,10 +66,15 @@ def _service_state(name: str) -> str:
         result = subprocess.run(["svstat", str(service_dir)], capture_output=True, text=True)
         if result.returncode == 0:
             output = result.stdout.strip()
-            if " up " in f" {output} " or output.endswith(" up"):
+            if _svstat_is_up(output):
                 return f"running ({output})"
             return f"not running ({output})" if output else "installed"
     return "installed"
+
+
+def _svstat_is_up(output: str) -> bool:
+    state = output.split(":", 1)[1].strip() if ":" in output else output.strip()
+    return state.startswith("up ") or state == "up"
 
 
 def _file_state(path: Path) -> str:

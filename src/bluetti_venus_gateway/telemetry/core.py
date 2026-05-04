@@ -28,8 +28,32 @@ def build_snapshot_envelope(
             "state": "fresh" if age_seconds <= stale_after_seconds else "stale",
             "age_seconds": round(age_seconds, 3),
         },
+        "stale_after_seconds": stale_after_seconds,
         "snapshot": dict(snapshot),
     }
+
+
+def refresh_snapshot_freshness(
+    envelope: dict[str, Any],
+    *,
+    now: datetime | None = None,
+    stale_after_seconds: int = 20,
+) -> dict[str, Any]:
+    refreshed = dict(envelope)
+    current = ensure_aware_utc(now or datetime.now(timezone.utc))
+    try:
+        received_at = parse_iso8601(str(envelope.get("received_at") or ""))
+    except Exception:
+        refreshed["freshness"] = {"state": "stale", "age_seconds": None}
+        refreshed["stale_after_seconds"] = stale_after_seconds
+        return refreshed
+    age_seconds = max(0.0, (current - received_at).total_seconds())
+    refreshed["freshness"] = {
+        "state": "fresh" if age_seconds <= stale_after_seconds else "stale",
+        "age_seconds": round(age_seconds, 3),
+    }
+    refreshed["stale_after_seconds"] = stale_after_seconds
+    return refreshed
 
 
 def ensure_aware_utc(value: datetime) -> datetime:
@@ -43,4 +67,3 @@ def parse_iso8601(raw_value: str) -> datetime:
     if normalized.endswith("Z"):
         normalized = normalized[:-1] + "+00:00"
     return datetime.fromisoformat(normalized).astimezone(timezone.utc)
-
