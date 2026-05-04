@@ -29,8 +29,8 @@ class VenusBridgeSettings:
     product_id: int = DEFAULT_PRODUCT_ID
     model_service_id: str = "ep760"
     installed_capacity_ah: float | None = None
-    voltage_low_alarm_v: float = 44.0
-    voltage_high_alarm_v: float = 58.5
+    voltage_low_alarm_v: float | None = None
+    voltage_high_alarm_v: float | None = None
     soc_low_alarm_pct: float = 10.0
     enable_vebus_compat: bool = False
 
@@ -281,8 +281,8 @@ def _calculate_consumed_ah(installed_capacity_ah: float | None, soc: float | Non
     return round(installed_capacity_ah * (100.0 - soc) / 100.0, 3)
 
 
-def _derive_alarm(value: float | None, threshold: float, direction: str) -> int:
-    if value is None:
+def _derive_alarm(value: float | None, threshold: float | None, direction: str) -> int:
+    if value is None or threshold is None:
         return 0
     if direction == "low":
         return 2 if value <= threshold else 0
@@ -318,4 +318,3 @@ __all__ = [
     "parse_iso8601",
     "settings_from_gateway_config",
 ]
-

@@ -1,5 +1,15 @@
 # ChangeLog
 
+## [2026-05-04 16:34] Disable unverified EP760 voltage alarms
+- Fixed false Venus GUI high-voltage alarm found during Raspberry Pi GUI validation
+- EP760 live Battery voltage was around `105V`, while previous default voltage alarm thresholds were inherited from a 48V-class battery profile
+- Disabled voltage alarm thresholds by default until EP760-specific low/high limits are confirmed
+- Added bridge model coverage proving unconfigured voltage thresholds do not raise HighVoltage/LowVoltage alarms
+- Verified locally with:
+  - `env PYTHONPATH=src python3 -m unittest discover -s tests`
+  - `python3 -m compileall -q src`
+  - `git diff --check`
+
 ## [2026-05-04 16:29] Persist boot repair through Venus rc.local
 - Fixed reboot recovery found during Raspberry Pi Task 13 validation:
   - `/service` is a tmpfs on Venus OS, so service symlinks disappear after reboot

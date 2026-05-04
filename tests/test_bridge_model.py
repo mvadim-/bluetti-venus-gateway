@@ -65,6 +65,19 @@ class BridgeModelTests(unittest.TestCase):
         self.assertEqual(payload["venus_grid"]["values"]["/Connected"], 0)
         self.assertEqual(payload["venus_ac_load"]["values"]["/Connected"], 0)
 
+    def test_build_venus_bridge_payload_does_not_raise_unconfigured_voltage_alarms(self) -> None:
+        payload = build_venus_bridge_payload(
+            {
+                "device_sn": "EP760SN",
+                "freshness": {"state": "fresh", "age_seconds": 2},
+                "snapshot": {"battery_voltage_v": 105.2, "battery_current_a": 18.1, "soc": 97},
+            },
+            settings=VenusBridgeSettings(),
+        )
+
+        self.assertEqual(payload["venus_battery"]["values"]["/Alarms/HighVoltage"], 0)
+        self.assertEqual(payload["venus_battery"]["values"]["/Alarms/LowVoltage"], 0)
+
     def test_iter_venus_service_payloads_skips_missing_optional_vebus(self) -> None:
         payload = build_venus_bridge_payload(
             {"device_sn": "EP760SN", "snapshot": {"soc": 76}},
