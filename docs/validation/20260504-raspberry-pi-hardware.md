@@ -7,7 +7,7 @@ host: venus.local
 device: Raspberry Pi 5
 Venus OS: v3.72
 VRM Portal ID: 2ccf672c2794
-gateway commit: 154033a
+gateway commit: 76ea8c6
 Python: 3.12.12
 OpenSSL: 3.5.5
 ```
@@ -28,6 +28,7 @@ D-Bus battery service: present
 D-Bus grid service: present
 D-Bus acload service: present
 D-Bus inverter service: present
+D-Bus multi service: present
 ```
 
 Expected D-Bus services were present:
@@ -37,6 +38,7 @@ com.victronenergy.battery.ep760_41
 com.victronenergy.grid.ep760_30
 com.victronenergy.acload.ep760_31
 com.victronenergy.inverter.ep760_32
+com.victronenergy.multi.ep760_32
 ```
 
 Battery alarm paths after the EP760 voltage-threshold correction:
@@ -65,6 +67,25 @@ com.victronenergy.system /Ac/ConsumptionOnOutput/L1/Power: 0W
 After commit `3d7f92e`, the Codex in-app browser showed Venus GUIv2 rendering the Inverter / Charger
 card as `Pass-thru` with Grid and AC Loads both around `332W`.
 
+After commit `76ea8c6`, the Multi compatibility service fixed Venus systemcalc active-source
+detection:
+
+```text
+com.victronenergy.multi.ep760_32 /Ac/In/1/Type: 1
+com.victronenergy.multi.ep760_32 /Ac/In/1/L1/P: 433W
+com.victronenergy.multi.ep760_32 /Ac/Out/L1/P: 438W
+com.victronenergy.multi.ep760_32 /State: 8
+com.victronenergy.multi.ep760_32 /Mode: 3
+com.victronenergy.system /Ac/ActiveIn/Source: 1
+com.victronenergy.system /Ac/ActiveIn/L1/Power: 432W
+com.victronenergy.system /Ac/Consumption/L1/Power: 434W
+com.victronenergy.system /Ac/ConsumptionOnOutput/L1/Power: 434W
+```
+
+The Codex in-app browser screenshot after commit `76ea8c6` showed Grid `435W`, Inverter / Charger
+`Pass-thru`, AC Loads `433W`, and an animated energy-flow line from Grid to Inverter / Charger and
+from Inverter / Charger to AC Loads.
+
 ## Validation Performed
 
 - Deployed the standalone gateway checkout to `/data/bluetti-venus-gateway`.
@@ -92,6 +113,13 @@ card as `Pass-thru` with Grid and AC Loads both around `332W`.
   load.
 - Corrected inverter state mapping so grid passthrough publishes `/State = 8` (`Pass-thru`) instead
   of `/State = 9` (`Inverting`) when real inverter output power is zero.
+- Added `com.victronenergy.multi.ep760_32` compatibility output because Venus OS v3.72 systemcalc
+  does not subscribe to active AC input paths on `com.victronenergy.inverter`; the Multi service
+  publishes Grid as `/Ac/In/1` and AC Loads as `/Ac/Out`.
+- Added phase-level energy paths for Grid and AC Loads so VRM has the service-specific counters it
+  expects:
+  - `/Ac/L1/Energy/Forward`
+  - `/Ac/L1/Energy/Reverse` for Grid
 - Installed and configured `ntp` through `install-venus.sh`. `/etc/ntp.conf` now has the gateway NTP
   marker block with `time.cloudflare.com`, `time.google.com`, `0.pool.ntp.org`, and `1.pool.ntp.org`;
   the local hardware clock fallback is commented out.
@@ -110,6 +138,9 @@ card as `Pass-thru` with Grid and AC Loads both around `332W`.
 - Venus GUI/VRM did not use standalone `com.victronenergy.acload` as expected on Venus OS v3.72.
   Added `com.victronenergy.inverter.ep760_32` with native inverter AC-out paths so systemcalc sees AC
   loads and VRM has inverter output paths to log.
+- Venus systemcalc kept `/Ac/ActiveIn/Source = 240` after inverter active-input paths were added,
+  because that Venus OS version monitors active input on `com.victronenergy.multi`, not
+  `com.victronenergy.inverter`. Fixed by adding `com.victronenergy.multi.ep760_32`.
 
 ## Operational Notes
 
@@ -122,8 +153,6 @@ card as `Pass-thru` with Grid and AC Loads both around `332W`.
 
 ## Pending User Confirmation
 
-- Re-check local Venus GUI after commit `3d7f92e`: Battery, AC Input, AC Loads, and Inverter/Charger
-  are visible in Codex in-app browser; Inverter/Charger renders as `Pass-thru`.
-- Re-check VRM Portal or VRM mobile app after commit `154033a`: Battery and Total consumption were
-  already confirmed by user; Grid/AC Input and inverter/output blocks need confirmation after the
-  inverter service and NTP fixes.
+- Re-check VRM Portal or VRM mobile app after commit `76ea8c6`: local GUI was confirmed with the
+  Codex in-app browser; VRM should receive the corrected Multi, active-source, Grid, and AC Loads
+  paths after the next vrmlogger upload interval.

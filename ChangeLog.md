@@ -278,6 +278,18 @@
   - `python3 -m compileall -q src`
   - `git diff --check`
 
+## [2026-05-04 21:17] Record Multi service Raspberry Pi validation
+- Deployed commit `76ea8c6` to Raspberry Pi and restarted gateway services
+- Verified live D-Bus values:
+  - `com.victronenergy.multi.ep760_32 /State = 8`
+  - `com.victronenergy.multi.ep760_32 /Ac/In/1/Type = 1`
+  - `com.victronenergy.multi.ep760_32 /Ac/In/1/L1/P` tracks Grid power
+  - `com.victronenergy.multi.ep760_32 /Ac/Out/L1/P` tracks AC Loads power
+  - `com.victronenergy.system /Ac/ActiveIn/Source = 1`
+- Verified with the Codex in-app browser that Venus GUIv2 shows the Grid-to-Inverter and
+  Inverter-to-AC-Loads flow while Inverter / Charger remains `Pass-thru`
+- Updated Raspberry Pi hardware validation notes with the live evidence
+
 ## [2026-05-04 20:55] Fix inverter passthrough state mapping
 - Fixed `com.victronenergy.inverter.ep760_32` state mapping for EP760 grid passthrough
 - The bridge now publishes `/State = 8` (`Pass-thru` in Venus GUIv2) when grid input is present and
