@@ -1,5 +1,16 @@
 # ChangeLog
 
+## [2026-05-04 15:57] Record local pre-hardware validation
+- Added `docs/validation/20260504-local-pre-hardware.md` with Task 12 validation evidence
+- Marked Task 12 complete in the copied implementation plan
+- Verified locally with:
+  - `env PYTHONPATH=src python3 -m unittest discover -s tests` (`28` tests)
+  - `python3 -m compileall -q src`
+  - `bash -n venus/install-venus.sh venus/update-venus.sh venus/repair-if-needed.sh venus/status.sh venus/restart.sh venus/logs.sh venus/uninstall-venus.sh venus/build-offline-bundle.sh venus/lib/offline-bundle.sh venus/services/bluetti-collector/run venus/services/bluetti-dbus-bridge/run venus/services/bluetti-repair-on-boot/run`
+  - `PYTHONPATH=backend/src python3 -m unittest backend.tests.bluetti.test_parser backend.tests.victron.test_bridge_model backend.tests.victron.test_projection_parity` in the reference `bluettiMonitor` repo (`11` tests)
+  - v1 bridge service parity check against the reference Victron bridge model
+  - `git diff --check`
+
 ## [2026-05-04 15:54] Complete Raspberry Pi deployment documentation
 - Added canonical deploy guide at `docs/deploy/bluetti-venus-gateway-rpi5.md`
 - Kept `docs/deploy/venus-gateway-rpi5.md` as a compatibility pointer

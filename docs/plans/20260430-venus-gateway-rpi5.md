@@ -1228,13 +1228,13 @@ Raspberry Pi validation:
 - Modify in gateway repo: tests/scripts created in previous tasks as needed.
 - Modify in gateway repo: gateway changelog.
 
-- [ ] run gateway unit tests
-- [ ] run relevant existing backend parser/bridge tests
-- [ ] run shell syntax checks
-- [ ] run `git diff --check`
-- [ ] compare v1 bridge payloads with `victron-lab` reference expectations
-- [ ] verify no gateway implementation files were added to `bluettiMonitor`
-- [ ] document remaining hardware-only checks
+- [x] run gateway unit tests
+- [x] run relevant existing backend parser/bridge tests
+- [x] run shell syntax checks
+- [x] run `git diff --check`
+- [x] compare v1 bridge payloads with `victron-lab` reference expectations
+- [x] verify no gateway implementation files were added to `bluettiMonitor`
+- [x] document remaining hardware-only checks
 
 ### Task 13: Raspberry Pi Hardware Deployment And VRM Validation
 
