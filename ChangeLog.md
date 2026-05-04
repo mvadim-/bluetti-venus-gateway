@@ -242,6 +242,21 @@
   - latest telemetry age `1s`
   - Battery, AC Input, and AC Load D-Bus services present
   - Battery `/Connected = 1`, `/Alarms/HighVoltage = 0`, `/Alarms/LowVoltage = 0`
+## [2026-05-04 17:06] Record inverter service Raspberry Pi validation
+- Updated Raspberry Pi hardware validation notes after deploying commit `154033a`
+- Recorded user findings:
+  - local Venus GUI showed Battery and Grid/AC Input, but inverter was off and AC Loads was missing
+  - VRM showed Total consumption and Battery values, while other blocks had no readings
+  - `ntp` was installed manually through opkg before being added to the installer
+- Recorded live post-fix checks on Raspberry Pi:
+  - `D-Bus inverter service: present`
+  - `com.victronenergy.inverter.ep760_32 /Mode = 3`
+  - `com.victronenergy.inverter.ep760_32 /State = 9`
+  - `com.victronenergy.system /Ac/HasAcLoads = 1`
+  - `com.victronenergy.system /Ac/Consumption/L1/Power` matches grid power and no longer
+    double-counts inverter passthrough load
+- Left final local GUI and VRM Portal visual confirmation open for the user after this deployment
+
 ## [2026-05-04 17:04] Avoid double-counting inverter passthrough load
 - During live Raspberry Pi validation of `com.victronenergy.inverter.ep760_32`, systemcalc
   `/Ac/Consumption/L1/Power` became approximately `grid + inverter output`

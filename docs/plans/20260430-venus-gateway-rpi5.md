@@ -1273,6 +1273,12 @@ Pending manual confirmations:
   service paths VRM logs for inverter output.
 - Persistent time synchronization is now handled by installing/configuring `ntp` during
   `install-venus.sh`.
+- Follow-up commit `154033a` is deployed on Raspberry Pi. Live D-Bus/systemcalc checks show:
+  - `com.victronenergy.inverter.ep760_32` present
+  - `/Mode = 3`
+  - `/State = 9`
+  - `/Ac/HasAcLoads = 1`
+  - `/Ac/Consumption/L1/Power` equals grid power instead of double-counting grid plus output load
 
 ## Post-Completion
 

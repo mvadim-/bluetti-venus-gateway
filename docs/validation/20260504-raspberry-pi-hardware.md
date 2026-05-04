@@ -7,7 +7,7 @@ host: venus.local
 device: Raspberry Pi 5
 Venus OS: v3.72
 VRM Portal ID: 2ccf672c2794
-gateway commit: 5c23951
+gateway commit: 154033a
 Python: 3.12.12
 OpenSSL: 3.5.5
 ```
@@ -27,6 +27,7 @@ latest telemetry age: 1s
 D-Bus battery service: present
 D-Bus grid service: present
 D-Bus acload service: present
+D-Bus inverter service: present
 ```
 
 Expected D-Bus services were present:
@@ -35,6 +36,7 @@ Expected D-Bus services were present:
 com.victronenergy.battery.ep760_41
 com.victronenergy.grid.ep760_30
 com.victronenergy.acload.ep760_31
+com.victronenergy.inverter.ep760_32
 ```
 
 Battery alarm paths after the EP760 voltage-threshold correction:
@@ -43,6 +45,21 @@ Battery alarm paths after the EP760 voltage-threshold correction:
 /Connected: 1
 /Alarms/HighVoltage: 0
 /Alarms/LowVoltage: 0
+```
+
+Inverter/servicecalc state after the GUI/VRM follow-up fix:
+
+```text
+com.victronenergy.inverter.ep760_32 /Connected: 1
+com.victronenergy.inverter.ep760_32 /Mode: 3
+com.victronenergy.inverter.ep760_32 /State: 9
+com.victronenergy.inverter.ep760_32 /Ac/Out/L1/P: 0W
+com.victronenergy.inverter.ep760_32 /Ac/Out/L1/V: 231.5V
+com.victronenergy.inverter.ep760_32 /Ac/Out/L1/I: 0.1A
+com.victronenergy.system /Ac/HasAcLoads: 1
+com.victronenergy.system /Ac/Grid/L1/Power: 380W
+com.victronenergy.system /Ac/Consumption/L1/Power: 380W
+com.victronenergy.system /Ac/ConsumptionOnOutput/L1/Power: 0W
 ```
 
 ## Validation Performed
@@ -65,6 +82,14 @@ Battery alarm paths after the EP760 voltage-threshold correction:
   and D-Bus services present.
 - Checked local Venus GUI after the voltage-alarm fix. The prior `High voltage` notification moved to
   inactive state after D-Bus alarm paths were cleared.
+- After user GUI validation, added a native `com.victronenergy.inverter.ep760_32` service because
+  Venus OS v3.72 systemcalc/GUIv2 does not use standalone `acload` for `/Ac/HasAcLoads`.
+- After live deploy, corrected inverter output mapping to use BLUETTI `inv_output_power_w` instead of
+  duplicating `ac_load_power_w`; this keeps Total consumption from double-counting grid passthrough
+  load.
+- Installed and configured `ntp` through `install-venus.sh`. `/etc/ntp.conf` now has the gateway NTP
+  marker block with `time.cloudflare.com`, `time.google.com`, `0.pool.ntp.org`, and `1.pool.ntp.org`;
+  the local hardware clock fallback is commented out.
 
 ## Hardware Findings Fixed During Validation
 
@@ -77,20 +102,24 @@ Battery alarm paths after the EP760 voltage-threshold correction:
 - EP760 battery voltage is around `105V`; previous default voltage alarm thresholds were 48V-class and
   caused a false local GUI high-voltage alarm. Voltage alarms are disabled by default until verified
   EP760 thresholds are configured.
+- Venus GUI/VRM did not use standalone `com.victronenergy.acload` as expected on Venus OS v3.72.
+  Added `com.victronenergy.inverter.ep760_32` with native inverter AC-out paths so systemcalc sees AC
+  loads and VRM has inverter output paths to log.
 
 ## Operational Notes
 
 - The Raspberry Pi system clock was wrong during validation and was manually corrected to
-  `2026-05-04` UTC. No `timedatectl`, `ntpd`, `chronyc`, `sntp`, or dedicated time-sync service was
-  found during the check. Correct system time is required for TLS/auth behavior and telemetry
-  freshness.
+  `2026-05-04` UTC. `ntp` is now installed/configured by the gateway installer unless
+  `BLUETTI_INSTALL_NTP=0` is set.
 - One boot produced a transient BLUETTI auth DNS error immediately after restart, then the collector
   connected successfully on retry.
 - Offline bundle was not installed on the Raspberry Pi during this pass; Git deployment was used.
 
 ## Pending User Confirmation
 
-- Local Venus GUI visual confirmation that the Overview/device list shows Battery, AC Input, and AC
-  Loads as expected.
-- VRM Portal or VRM mobile app confirmation that Battery, AC Input, and AC Loads appear and update
-  where VRM supports those service classes.
+- Re-check local Venus GUI after commit `154033a`: Battery and AC Input were already confirmed by
+  user; inverter should no longer stay off, and AC-load presence should be visible through the Venus
+  system AC-load surface.
+- Re-check VRM Portal or VRM mobile app after commit `154033a`: Battery and Total consumption were
+  already confirmed by user; Grid/AC Input and inverter/output blocks need confirmation after the
+  inverter service and NTP fixes.
