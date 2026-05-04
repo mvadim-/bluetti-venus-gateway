@@ -11,6 +11,8 @@ from bluetti_venus_gateway.telemetry.core import parse_iso8601
 SCHEMA_VERSION = 1
 DEFAULT_PRODUCT_ID = 0
 INVERTER_OUTPUT_EPSILON_W = 5.0
+AC_INPUT_NOT_CONNECTED = 0xF0
+AC_INPUT_TYPE_GRID = 1
 SYSTEM_STATE_OFF = 0
 SYSTEM_STATE_PASS_THROUGH = 8
 SYSTEM_STATE_INVERTING = 9
@@ -171,6 +173,8 @@ def _build_grid_values(snapshot: dict[str, Any], *, settings: VenusBridgeSetting
     voltage = _pick_number(snapshot, "grid_voltage_v")
     current = _pick_number(snapshot, "grid_current_a") or _calculate_current(power, voltage)
     frequency = _pick_number(snapshot, "grid_freq_hz")
+    forward_energy = _pick_number(snapshot, "grid_charge_energy_total_kwh", "grid_charge_energy_kwh")
+    reverse_energy = _pick_number(snapshot, "grid_feedback_energy_total_kwh", "feedback_energy_kwh")
     return {
         "/Connected": 1 if any(value is not None for value in (power, voltage, current, frequency)) else 0,
         "/CustomName": settings.grid_custom_name,
@@ -184,8 +188,10 @@ def _build_grid_values(snapshot: dict[str, Any], *, settings: VenusBridgeSetting
         "/Ac/L1/Power": power,
         "/Ac/Power": power,
         "/Ac/Frequency": frequency,
-        "/Ac/Energy/Forward": _pick_number(snapshot, "grid_charge_energy_total_kwh", "grid_charge_energy_kwh"),
-        "/Ac/Energy/Reverse": _pick_number(snapshot, "grid_feedback_energy_total_kwh", "feedback_energy_kwh"),
+        "/Ac/L1/Energy/Forward": forward_energy,
+        "/Ac/L1/Energy/Reverse": reverse_energy,
+        "/Ac/Energy/Forward": forward_energy,
+        "/Ac/Energy/Reverse": reverse_energy,
     }
 
 
@@ -194,6 +200,7 @@ def _build_acload_values(snapshot: dict[str, Any], *, settings: VenusBridgeSetti
     voltage = _pick_number(snapshot, "load_voltage_v", "inv_output_voltage_v", "grid_voltage_v")
     current = _pick_number(snapshot, "load_current_a", "inv_output_current_a") or _calculate_current(power, voltage)
     frequency = _pick_number(snapshot, "inv_output_freq_hz", "grid_freq_hz")
+    forward_energy = _pick_number(snapshot, "ac_energy_kwh")
     return {
         "/Connected": 1 if any(value is not None for value in (power, voltage, current, frequency)) else 0,
         "/CustomName": settings.acload_custom_name,
@@ -207,7 +214,8 @@ def _build_acload_values(snapshot: dict[str, Any], *, settings: VenusBridgeSetti
         "/Ac/L1/Power": power,
         "/Ac/Power": power,
         "/Ac/Frequency": frequency,
-        "/Ac/Energy/Forward": _pick_number(snapshot, "ac_energy_kwh"),
+        "/Ac/L1/Energy/Forward": forward_energy,
+        "/Ac/Energy/Forward": forward_energy,
     }
 
 
@@ -222,6 +230,11 @@ def _build_inverter_values(
     load_voltage = _pick_number(snapshot, "inv_output_voltage_v", "load_voltage_v", "grid_voltage_v")
     load_current = _pick_inverter_output_current(snapshot, load_power=load_power, load_voltage=load_voltage)
     frequency = _pick_number(snapshot, "inv_output_freq_hz", "grid_freq_hz")
+    grid_power = _pick_number(snapshot, "grid_power_w", "grid_power_w_phase_1", "grid_charge_power_w")
+    grid_voltage = _pick_number(snapshot, "grid_voltage_v")
+    grid_current = _pick_number(snapshot, "grid_current_a") or _calculate_current(grid_power, grid_voltage)
+    grid_connected = any(value is not None for value in (grid_power, grid_voltage, grid_current))
+    active_input = 0 if grid_connected else AC_INPUT_NOT_CONNECTED
     dc_power = -load_power if load_power is not None else None
     dc_current = _calculate_current(dc_power, battery_voltage)
     connected = 1 if any(value is not None for value in (load_power, load_voltage, load_current, frequency)) else 0
@@ -240,6 +253,15 @@ def _build_inverter_values(
         "/Dc/0/Voltage": battery_voltage,
         "/Dc/0/Current": dc_current,
         "/Dc/0/Power": dc_power,
+        "/Ac/NumberOfAcInputs": 1,
+        "/Ac/ActiveIn/ActiveInput": active_input,
+        "/Ac/ActiveIn/Connected": 1 if grid_connected else 0,
+        "/Ac/ActiveIn/L1/V": grid_voltage,
+        "/Ac/ActiveIn/L1/I": grid_current,
+        "/Ac/ActiveIn/L1/P": grid_power,
+        "/Ac/In/1/Connected": 1 if grid_connected else 0,
+        "/Ac/In/1/Type": AC_INPUT_TYPE_GRID,
+        "/Ac/In/1/L1/V": grid_voltage,
         "/Ac/Out/L1/V": load_voltage,
         "/Ac/Out/L1/I": load_current,
         "/Ac/Out/L1/P": load_power,

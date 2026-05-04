@@ -252,6 +252,20 @@
 - Verified with the Codex in-app browser that Venus GUIv2 renders the Inverter / Charger card as
   `Pass-thru` while Grid and AC Loads remain visible
 
+## [2026-05-04 21:05] Publish inverter AC input and phase energy paths
+- Added active AC input paths to `com.victronenergy.inverter.ep760_32` so Venus GUI/VRM can identify
+  the EP760 grid input while the inverter remains in pass-through
+- Kept inverter AC output power isolated from standalone AC Loads to avoid returning to system
+  consumption double-counting
+- Added phase-level energy counters for Grid and AC Loads:
+  - `/Ac/L1/Energy/Forward`
+  - `/Ac/L1/Energy/Reverse` for Grid
+- Added unit coverage for inverter active input state and VRM-compatible phase energy paths
+- Verified locally with:
+  - `env PYTHONPATH=src python3 -m unittest discover -s tests`
+  - `python3 -m compileall -q src`
+  - `git diff --check`
+
 ## [2026-05-04 20:55] Fix inverter passthrough state mapping
 - Fixed `com.victronenergy.inverter.ep760_32` state mapping for EP760 grid passthrough
 - The bridge now publishes `/State = 8` (`Pass-thru` in Venus GUIv2) when grid input is present and
