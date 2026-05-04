@@ -17,14 +17,17 @@ class VenusBridgeSettings:
     battery_device_instance: int = 41
     grid_device_instance: int = 30
     acload_device_instance: int = 31
+    inverter_device_instance: int = 32
     vebus_device_instance: int = 32
     battery_custom_name: str = "BLUETTI EP760"
     grid_custom_name: str = "BLUETTI EP760 AC Input"
     acload_custom_name: str = "BLUETTI EP760 AC Loads"
+    inverter_custom_name: str = "BLUETTI EP760 Inverter"
     vebus_custom_name: str = "BLUETTI EP760 VE.Bus"
     product_name: str = "BLUETTI EP760 Bridge"
     grid_product_name: str = "BLUETTI EP760 AC Input Bridge"
     acload_product_name: str = "BLUETTI EP760 AC Loads Bridge"
+    inverter_product_name: str = "BLUETTI EP760 Inverter Bridge"
     vebus_product_name: str = "BLUETTI EP760 VE.Bus Bridge"
     product_id: int = DEFAULT_PRODUCT_ID
     model_service_id: str = "ep760"
@@ -32,6 +35,7 @@ class VenusBridgeSettings:
     voltage_low_alarm_v: float | None = None
     voltage_high_alarm_v: float | None = None
     soc_low_alarm_pct: float = 10.0
+    enable_inverter_service: bool = True
     enable_vebus_compat: bool = False
 
 
@@ -40,9 +44,12 @@ def settings_from_gateway_config(config: Any) -> VenusBridgeSettings:
         battery_device_instance=config.battery_device_instance,
         grid_device_instance=config.grid_device_instance,
         acload_device_instance=config.acload_device_instance,
+        inverter_device_instance=config.inverter_device_instance,
         battery_custom_name=config.battery_custom_name,
         grid_custom_name=config.grid_custom_name,
         acload_custom_name=config.acload_custom_name,
+        inverter_custom_name=config.inverter_custom_name,
+        enable_inverter_service=config.enable_inverter_service,
         enable_vebus_compat=config.enable_vebus_compat,
     )
 
@@ -59,6 +66,12 @@ def build_venus_bridge_payload(
     battery = _build_battery_values(snapshot, settings=settings, serial=serial)
     grid = _build_grid_values(snapshot, settings=settings, serial=serial)
     acload = _build_acload_values(snapshot, settings=settings, serial=serial)
+    inverter = _build_inverter_values(
+        snapshot,
+        settings=settings,
+        serial=serial,
+        battery_voltage=battery["/Dc/0/Voltage"],
+    )
 
     payload = {
         "schema_version": SCHEMA_VERSION,
@@ -80,6 +93,11 @@ def build_venus_bridge_payload(
             "values": acload,
         },
     }
+    if settings.enable_inverter_service:
+        payload["venus_inverter"] = {
+            "service_name": f"com.victronenergy.inverter.{settings.model_service_id}_{settings.inverter_device_instance}",
+            "values": inverter,
+        }
     if settings.enable_vebus_compat:
         payload["venus_vebus"] = {
             "service_name": f"com.victronenergy.vebus.{settings.model_service_id}_{settings.vebus_device_instance}",
@@ -96,7 +114,7 @@ def build_venus_bridge_payload(
 
 
 def disconnect_venus_services(payload: dict[str, Any]) -> None:
-    for key in ("venus_battery", "venus_grid", "venus_ac_load", "venus_vebus"):
+    for key in ("venus_battery", "venus_grid", "venus_ac_load", "venus_inverter", "venus_vebus"):
         service_payload = payload.get(key)
         if not isinstance(service_payload, dict):
             continue
@@ -106,7 +124,7 @@ def disconnect_venus_services(payload: dict[str, Any]) -> None:
 
 
 def iter_venus_service_payloads(payload: dict[str, Any]):
-    for key in ("venus_battery", "venus_grid", "venus_ac_load", "venus_vebus"):
+    for key in ("venus_battery", "venus_grid", "venus_ac_load", "venus_inverter", "venus_vebus"):
         service_payload = payload.get(key) or {}
         service_name = str(service_payload.get("service_name") or "").strip()
         values = service_payload.get("values") or {}
@@ -186,6 +204,45 @@ def _build_acload_values(snapshot: dict[str, Any], *, settings: VenusBridgeSetti
         "/Ac/Power": power,
         "/Ac/Frequency": frequency,
         "/Ac/Energy/Forward": _pick_number(snapshot, "ac_energy_kwh"),
+    }
+
+
+def _build_inverter_values(
+    snapshot: dict[str, Any],
+    *,
+    settings: VenusBridgeSettings,
+    serial: str,
+    battery_voltage: float | None,
+) -> dict[str, Any]:
+    load_power = _pick_number(snapshot, "ac_load_power_w", "ac_power_w", "inv_output_power_w")
+    load_voltage = _pick_number(snapshot, "load_voltage_v", "inv_output_voltage_v", "grid_voltage_v")
+    load_current = _pick_number(snapshot, "load_current_a", "inv_output_current_a") or _calculate_current(
+        load_power,
+        load_voltage,
+    )
+    frequency = _pick_number(snapshot, "inv_output_freq_hz", "grid_freq_hz")
+    dc_power = -load_power if load_power is not None else None
+    dc_current = _calculate_current(dc_power, battery_voltage)
+    connected = 1 if any(value is not None for value in (load_power, load_voltage, load_current, frequency)) else 0
+    return {
+        "/Connected": connected,
+        "/CustomName": settings.inverter_custom_name,
+        "/DeviceInstance": settings.inverter_device_instance,
+        "/DeviceOffReason": 0,
+        "/IsInverterCharger": 1,
+        "/Mode": 3 if connected else 4,
+        "/ProductId": settings.product_id,
+        "/ProductName": settings.inverter_product_name,
+        "/Serial": f"{serial}-inverter",
+        "/State": 9 if connected else 0,
+        "/Dc/0/Voltage": battery_voltage,
+        "/Dc/0/Current": dc_current,
+        "/Dc/0/Power": dc_power,
+        "/Ac/Out/L1/V": load_voltage,
+        "/Ac/Out/L1/I": load_current,
+        "/Ac/Out/L1/P": load_power,
+        "/Ac/Out/L1/S": _calculate_power(load_voltage, load_current),
+        "/Ac/Out/L1/F": frequency,
     }
 
 

@@ -44,6 +44,8 @@ def render_status(config_path: Path = DEFAULT_CONFIG_PATH) -> str:
     lines.append(f"D-Bus battery service: {_dbus_has_name('com.victronenergy.battery.ep760_' + str(config.battery_device_instance))}")
     lines.append(f"D-Bus grid service: {_dbus_has_name('com.victronenergy.grid.ep760_' + str(config.grid_device_instance))}")
     lines.append(f"D-Bus acload service: {_dbus_has_name('com.victronenergy.acload.ep760_' + str(config.acload_device_instance))}")
+    if config.enable_inverter_service:
+        lines.append(f"D-Bus inverter service: {_dbus_has_name('com.victronenergy.inverter.ep760_' + str(config.inverter_device_instance))}")
     lines.append(f"offline bundle: {'present' if list(Path('/data').glob('bluetti-venus-gateway-*.tar.gz')) else 'missing'}")
     return "\n".join(lines)
 

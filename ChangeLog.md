@@ -242,3 +242,20 @@
   - latest telemetry age `1s`
   - Battery, AC Input, and AC Load D-Bus services present
   - Battery `/Connected = 1`, `/Alarms/HighVoltage = 0`, `/Alarms/LowVoltage = 0`
+## [2026-05-04 16:58] Add Venus inverter service and installer NTP setup
+- Continued Raspberry Pi Task 13 follow-up from user GUI/VRM validation
+- Added default `com.victronenergy.inverter.ep760_32` publishing with Venus-compatible AC output
+  paths:
+  - `/Ac/Out/L1/P`
+  - `/Ac/Out/L1/V`
+  - `/Ac/Out/L1/I`
+  - `/Ac/Out/L1/F`
+  - `/Mode`
+  - `/State`
+- Kept `com.victronenergy.acload.ep760_31` for VRM logging compatibility while adding the inverter
+  service required by Venus OS v3.72 systemcalc/GUIv2
+- Added config keys for enabling and naming the inverter service
+- Updated `status.sh` to report the inverter D-Bus service
+- Updated `install-venus.sh` to install/configure `ntp` by default through opkg, add external NTP
+  servers, and restart `ntpd`
+- Updated README, Raspberry Pi deploy docs, and implementation plan notes

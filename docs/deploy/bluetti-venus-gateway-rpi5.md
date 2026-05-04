@@ -1,7 +1,8 @@
 # BLUETTI Venus Gateway On Raspberry Pi 5
 
 This guide installs the standalone BLUETTI Venus Gateway on Raspberry Pi 5 running official Venus OS.
-The v1 runtime publishes an EP760 as native Venus D-Bus Battery, AC Input, and AC Load services.
+The v1 runtime publishes an EP760 as native Venus D-Bus Battery, AC Input, AC Load, and Inverter
+services.
 
 ## Fresh Venus OS Setup
 
@@ -13,8 +14,9 @@ The v1 runtime publishes an EP760 as native Venus D-Bus Battery, AC Input, and A
 6. Confirm system time/NTP is correct.
 
 Correct system time is required for BLUETTI TLS/auth behavior and for telemetry stale-age decisions.
-On the validated Venus OS v3.72 Raspberry Pi image, no `timedatectl`, `ntpd`, `chronyc`, `sntp`, or
-dedicated time-sync service was found, so check `date -u` before relying on the gateway.
+The installer manages `ntp` by default through `opkg install ntp`, configures external NTP servers,
+and restarts `ntpd`. Set `BLUETTI_INSTALL_NTP=0` before running the installer only if time sync is
+managed separately.
 
 Confirmed production target:
 
@@ -39,6 +41,7 @@ python3-dbus
 python3-paho-mqtt
 python3-pygobject
 python3-cryptography
+ntp
 ```
 
 The installer checks the required commands/imports and reports missing items explicitly.
@@ -86,6 +89,7 @@ BLUETTI_MQTT_CIPHERS=DEFAULT:@SECLEVEL=0
 BLUETTI_MQTT_TLS_VERIFY_SERVER=0
 BLUETTI_ENABLE_PV=0
 BLUETTI_ENABLE_PACK_DIAGNOSTICS=0
+BLUETTI_ENABLE_INVERTER_SERVICE=1
 BLUETTI_ENABLE_VEBUS_COMPAT=0
 ```
 
@@ -99,9 +103,11 @@ Device instances and labels:
 BLUETTI_BATTERY_DEVICE_INSTANCE=41
 BLUETTI_GRID_DEVICE_INSTANCE=30
 BLUETTI_ACLOAD_DEVICE_INSTANCE=31
+BLUETTI_INVERTER_DEVICE_INSTANCE=32
 BLUETTI_BATTERY_CUSTOM_NAME="BLUETTI EP760"
 BLUETTI_GRID_CUSTOM_NAME="BLUETTI EP760 AC Input"
 BLUETTI_ACLOAD_CUSTOM_NAME="BLUETTI EP760 AC Loads"
+BLUETTI_INVERTER_CUSTOM_NAME="BLUETTI EP760 Inverter"
 ```
 
 Secrets, tokens, and private keys are not printed by status/log scripts.
@@ -124,6 +130,7 @@ latest telemetry age: below 20s
 D-Bus battery service: present
 D-Bus grid service: present
 D-Bus acload service: present
+D-Bus inverter service: present
 ```
 
 Expected D-Bus service names:
@@ -132,7 +139,12 @@ Expected D-Bus service names:
 com.victronenergy.battery.ep760_41
 com.victronenergy.grid.ep760_30
 com.victronenergy.acload.ep760_31
+com.victronenergy.inverter.ep760_32
 ```
+
+`com.victronenergy.inverter.ep760_32` is enabled by default because Venus OS v3.72 systemcalc and
+GUIv2 consume inverter AC output from `/Ac/Out/L1/P`, `/Ac/Out/L1/V`, `/Ac/Out/L1/I`, and
+`/Ac/Out/L1/F`. The standalone `acload` service remains published for VRM logging compatibility.
 
 Expected battery alarm state for the current EP760 default configuration:
 
@@ -240,6 +252,18 @@ missing required OpenSSL legacy provider
 ```
 
 Install `openssl-ossl-module-legacy` through opkg.
+
+Disable installer-managed NTP:
+
+```bash
+BLUETTI_INSTALL_NTP=0 ./venus/install-venus.sh
+```
+
+Override NTP servers:
+
+```bash
+BLUETTI_NTP_SERVERS="time.cloudflare.com time.google.com 0.pool.ntp.org" ./venus/install-venus.sh
+```
 
 Snapshot missing:
 

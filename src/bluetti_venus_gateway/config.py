@@ -34,13 +34,16 @@ class GatewayConfig:
     stale_after_seconds: int
     enable_pv: bool
     enable_pack_diagnostics: bool
+    enable_inverter_service: bool
     enable_vebus_compat: bool
     battery_device_instance: int
     grid_device_instance: int
     acload_device_instance: int
+    inverter_device_instance: int
     battery_custom_name: str
     grid_custom_name: str
     acload_custom_name: str
+    inverter_custom_name: str
     auth_device_id: str
     mqtt_client_id: str
     mqtt_payload_format: str
@@ -109,13 +112,16 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH, env: Mapping[str, str] | None 
         stale_after_seconds=_positive_int(merged.get("BLUETTI_STALE_AFTER_SECONDS", "20"), "BLUETTI_STALE_AFTER_SECONDS"),
         enable_pv=_bool(merged.get("BLUETTI_ENABLE_PV", "0"), "BLUETTI_ENABLE_PV"),
         enable_pack_diagnostics=_bool(merged.get("BLUETTI_ENABLE_PACK_DIAGNOSTICS", "0"), "BLUETTI_ENABLE_PACK_DIAGNOSTICS"),
+        enable_inverter_service=_bool(merged.get("BLUETTI_ENABLE_INVERTER_SERVICE", "1"), "BLUETTI_ENABLE_INVERTER_SERVICE"),
         enable_vebus_compat=_bool(merged.get("BLUETTI_ENABLE_VEBUS_COMPAT", "0"), "BLUETTI_ENABLE_VEBUS_COMPAT"),
         battery_device_instance=_non_negative_int(merged.get("BLUETTI_BATTERY_DEVICE_INSTANCE", "41"), "BLUETTI_BATTERY_DEVICE_INSTANCE"),
         grid_device_instance=_non_negative_int(merged.get("BLUETTI_GRID_DEVICE_INSTANCE", "30"), "BLUETTI_GRID_DEVICE_INSTANCE"),
         acload_device_instance=_non_negative_int(merged.get("BLUETTI_ACLOAD_DEVICE_INSTANCE", "31"), "BLUETTI_ACLOAD_DEVICE_INSTANCE"),
+        inverter_device_instance=_non_negative_int(merged.get("BLUETTI_INVERTER_DEVICE_INSTANCE", "32"), "BLUETTI_INVERTER_DEVICE_INSTANCE"),
         battery_custom_name=merged.get("BLUETTI_BATTERY_CUSTOM_NAME", "BLUETTI EP760"),
         grid_custom_name=merged.get("BLUETTI_GRID_CUSTOM_NAME", "BLUETTI EP760 AC Input"),
         acload_custom_name=merged.get("BLUETTI_ACLOAD_CUSTOM_NAME", "BLUETTI EP760 AC Loads"),
+        inverter_custom_name=merged.get("BLUETTI_INVERTER_CUSTOM_NAME", "BLUETTI EP760 Inverter"),
         auth_device_id=merged.get("BLUETTI_AUTH_DEVICE_ID", "4C12EBA9-B7B8-40DC-91D6-9A6DC81235A6"),
         mqtt_client_id=merged.get("BLUETTI_MQTT_CLIENT_ID", "bluetti-venus-gateway"),
         mqtt_payload_format=merged.get("BLUETTI_MQTT_PAYLOAD_FORMAT", "new"),

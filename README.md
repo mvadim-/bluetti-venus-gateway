@@ -1,8 +1,8 @@
 # BLUETTI Venus Gateway
 
 Standalone native Venus OS gateway for BLUETTI systems. The v1 target is Raspberry Pi 5 running
-official Venus OS, publishing EP760 Battery, AC Input, and AC Loads as native D-Bus services for
-local Venus UI and VRM through the stock `vrmlogger`.
+official Venus OS, publishing EP760 Battery, AC Input, AC Loads, and Inverter services for local
+Venus UI and VRM through the stock `vrmlogger`.
 
 Production runtime is intentionally small:
 
@@ -43,6 +43,7 @@ Expected services after BLUETTI credentials are configured:
 - `com.victronenergy.battery.ep760_41`
 - `com.victronenergy.grid.ep760_30`
 - `com.victronenergy.acload.ep760_31`
+- `com.victronenergy.inverter.ep760_32`
 
 See [docs/deploy/bluetti-venus-gateway-rpi5.md](docs/deploy/bluetti-venus-gateway-rpi5.md).
 

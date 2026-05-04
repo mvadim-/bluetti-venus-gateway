@@ -1264,8 +1264,15 @@ Pending manual confirmations:
 - Local GUI visual confirmation is pending because GUIv2 browser automation could confirm the prior
   high-voltage notification became inactive, but could not reliably inspect the Overview/device list.
 - VRM Portal validation is pending user confirmation or VRM access.
-- Confirm or configure persistent time synchronization. The tested Venus OS image had an incorrect
-  system clock and no obvious NTP/time-sync service during validation.
+- User confirmed local Venus GUI shows Battery and Grid/AC Input, but the inverter status stays off
+  and `BLUETTI EP760 AC Loads` is not visible. Follow-up implementation adds a native
+  `com.victronenergy.inverter.ep760_32` service because Venus OS v3.72 systemcalc monitors inverter
+  AC-out paths, not standalone `acload`, for this UI surface.
+- User confirmed VRM shows Total consumption and Battery values, while the remaining blocks render
+  without readings. Follow-up implementation keeps `acload` for VRM logging and adds the inverter
+  service paths VRM logs for inverter output.
+- Persistent time synchronization is now handled by installing/configuring `ntp` during
+  `install-venus.sh`.
 
 ## Post-Completion
 

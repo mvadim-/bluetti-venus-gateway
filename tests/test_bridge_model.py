@@ -32,11 +32,15 @@ class BridgeModelTests(unittest.TestCase):
         self.assertEqual(payload["venus_battery"]["service_name"], "com.victronenergy.battery.ep760_41")
         self.assertEqual(payload["venus_grid"]["service_name"], "com.victronenergy.grid.ep760_30")
         self.assertEqual(payload["venus_ac_load"]["service_name"], "com.victronenergy.acload.ep760_31")
+        self.assertEqual(payload["venus_inverter"]["service_name"], "com.victronenergy.inverter.ep760_32")
         self.assertNotIn("venus_vebus", payload)
         self.assertEqual(payload["venus_battery"]["values"]["/Soc"], 76.0)
         self.assertEqual(payload["venus_battery"]["values"]["/Dc/0/Power"], -646.04)
         self.assertEqual(payload["venus_grid"]["values"]["/Ac/L1/Power"], 920.0)
         self.assertEqual(payload["venus_ac_load"]["values"]["/Ac/L1/Current"], 2.8)
+        self.assertEqual(payload["venus_inverter"]["values"]["/Ac/Out/L1/P"], 650.0)
+        self.assertEqual(payload["venus_inverter"]["values"]["/Mode"], 3)
+        self.assertEqual(payload["venus_inverter"]["values"]["/State"], 9)
 
     def test_build_venus_bridge_payload_can_include_vebus_compat(self) -> None:
         payload = build_venus_bridge_payload(
@@ -64,6 +68,7 @@ class BridgeModelTests(unittest.TestCase):
         self.assertEqual(payload["venus_battery"]["values"]["/Connected"], 0)
         self.assertEqual(payload["venus_grid"]["values"]["/Connected"], 0)
         self.assertEqual(payload["venus_ac_load"]["values"]["/Connected"], 0)
+        self.assertEqual(payload["venus_inverter"]["values"]["/Connected"], 0)
 
     def test_build_venus_bridge_payload_does_not_raise_unconfigured_voltage_alarms(self) -> None:
         payload = build_venus_bridge_payload(
@@ -90,6 +95,7 @@ class BridgeModelTests(unittest.TestCase):
                 "com.victronenergy.battery.ep760_41",
                 "com.victronenergy.grid.ep760_30",
                 "com.victronenergy.acload.ep760_31",
+                "com.victronenergy.inverter.ep760_32",
             ],
         )
 

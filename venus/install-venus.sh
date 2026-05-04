@@ -7,6 +7,9 @@ RUN_DIR="${BLUETTI_RUN_DIR:-/run/bluetti-gateway}"
 CONFIG_FILE="$DATA_DIR/bluetti-gateway.env"
 SERVICE_ROOT="${BLUETTI_SERVICE_ROOT:-/service}"
 STATE_DIR="$DATA_DIR/state"
+INSTALL_NTP="${BLUETTI_INSTALL_NTP:-1}"
+NTP_CONF="${BLUETTI_NTP_CONF:-/etc/ntp.conf}"
+NTP_SERVERS="${BLUETTI_NTP_SERVERS:-time.cloudflare.com time.google.com 0.pool.ntp.org 1.pool.ntp.org}"
 DRY_RUN=0
 OFFLINE_BUNDLE=""
 
@@ -141,6 +144,81 @@ start_service_if_ready() {
   fi
 }
 
+ensure_time_sync() {
+  case "$INSTALL_NTP" in
+    1|true|TRUE|yes|YES|on|ON) ;;
+    *)
+      log "Skipping NTP setup because BLUETTI_INSTALL_NTP=$INSTALL_NTP"
+      return 0
+      ;;
+  esac
+  if [ "$DRY_RUN" = "1" ]; then
+    log "dry-run: ensure ntp package, configure $NTP_CONF, and restart ntpd"
+    return 0
+  fi
+  if ! command -v ntpd >/dev/null 2>&1; then
+    if ! command -v opkg >/dev/null 2>&1; then
+      log "missing ntpd and opkg; install ntp manually or set BLUETTI_INSTALL_NTP=0"
+      exit 1
+    fi
+    log "Installing ntp through opkg"
+    opkg update
+    opkg install ntp
+  fi
+  configure_ntp
+  restart_ntpd
+}
+
+configure_ntp() {
+  marker_begin="# BEGIN BLUETTI Venus Gateway NTP"
+  marker_end="# END BLUETTI Venus Gateway NTP"
+  tmp="$STATE_DIR/ntp.conf.tmp"
+  mkdir -p "$(dirname "$NTP_CONF")" "$STATE_DIR"
+  if [ -f "$NTP_CONF" ] && [ ! -f "$STATE_DIR/ntp.conf.before-bluetti" ]; then
+    cp "$NTP_CONF" "$STATE_DIR/ntp.conf.before-bluetti"
+  fi
+  if [ ! -f "$NTP_CONF" ]; then
+    cat >"$NTP_CONF" <<EOF
+driftfile /var/lib/ntp/drift
+restrict -4 default notrap nomodify nopeer noquery
+restrict -6 default notrap nomodify nopeer noquery
+restrict 127.0.0.1
+restrict ::1
+EOF
+  fi
+  awk -v begin="$marker_begin" -v end="$marker_end" '
+    $0 == begin { skip = 1; next }
+    $0 == end { skip = 0; next }
+    skip { next }
+    /^[[:space:]]*server[[:space:]]+127\.127\.1\.0/ { print "# " $0; next }
+    /^[[:space:]]*fudge[[:space:]]+127\.127\.1\.0/ { print "# " $0; next }
+    { print }
+  ' "$NTP_CONF" >"$tmp"
+  {
+    cat "$tmp"
+    printf '%s\n' "$marker_begin"
+    for server in $NTP_SERVERS; do
+      printf 'server %s iburst\n' "$server"
+    done
+    printf '%s\n' "$marker_end"
+  } >"$tmp.next"
+  mv "$tmp.next" "$NTP_CONF"
+  rm -f "$tmp"
+}
+
+restart_ntpd() {
+  if [ -x /etc/init.d/ntpd ]; then
+    /etc/init.d/ntpd restart || /etc/init.d/ntpd start || true
+    return 0
+  fi
+  if pidof ntpd >/dev/null 2>&1; then
+    return 0
+  fi
+  if command -v ntpd >/dev/null 2>&1; then
+    ntpd -u ntp:ntp -p /var/run/ntpd.pid -g || true
+  fi
+}
+
 write_install_state() {
   version="unknown"
   if [ -f /opt/victronenergy/version ]; then
@@ -209,6 +287,7 @@ log "Installing BLUETTI Venus Gateway from $APP_DIR"
 check_prerequisites
 run mkdir -p "$DATA_DIR" "$DATA_DIR/cache" "$DATA_DIR/certs" "$DATA_DIR/logs" "$STATE_DIR" "$RUN_DIR"
 run touch "$DATA_DIR/logs/bluetti-collector.log" "$DATA_DIR/logs/bluetti-dbus-bridge.log" "$DATA_DIR/logs/bluetti-repair-on-boot.log"
+ensure_time_sync
 if [ ! -f "$CONFIG_FILE" ]; then
   run cp "$APP_DIR/venus/config/bluetti-gateway.env.example" "$CONFIG_FILE"
   run chmod 600 "$CONFIG_FILE"
