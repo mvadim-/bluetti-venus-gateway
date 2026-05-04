@@ -242,6 +242,16 @@
   - latest telemetry age `1s`
   - Battery, AC Input, and AC Load D-Bus services present
   - Battery `/Connected = 1`, `/Alarms/HighVoltage = 0`, `/Alarms/LowVoltage = 0`
+## [2026-05-04 20:56] Record inverter passthrough GUI validation
+- Deployed commit `3d7f92e` to Raspberry Pi and restarted gateway services
+- Verified live D-Bus values:
+  - `com.victronenergy.inverter.ep760_32 /State = 8`
+  - `com.victronenergy.inverter.ep760_32 /Ac/Out/L1/P = 0`
+  - `com.victronenergy.inverter.ep760_32 /Ac/Out/L1/I = 0`
+  - `com.victronenergy.system /Ac/Consumption/L1/Power` matches Grid power
+- Verified with the Codex in-app browser that Venus GUIv2 renders the Inverter / Charger card as
+  `Pass-thru` while Grid and AC Loads remain visible
+
 ## [2026-05-04 20:55] Fix inverter passthrough state mapping
 - Fixed `com.victronenergy.inverter.ep760_32` state mapping for EP760 grid passthrough
 - The bridge now publishes `/State = 8` (`Pass-thru` in Venus GUIv2) when grid input is present and

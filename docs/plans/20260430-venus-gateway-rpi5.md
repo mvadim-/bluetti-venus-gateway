@@ -1276,9 +1276,14 @@ Pending manual confirmations:
 - Follow-up commit `154033a` is deployed on Raspberry Pi. Live D-Bus/systemcalc checks show:
   - `com.victronenergy.inverter.ep760_32` present
   - `/Mode = 3`
-  - `/State = 9`
   - `/Ac/HasAcLoads = 1`
   - `/Ac/Consumption/L1/Power` equals grid power instead of double-counting grid plus output load
+- Follow-up commit `3d7f92e` is deployed on Raspberry Pi. Live D-Bus and Codex in-app browser checks
+  show:
+  - inverter `/State = 8`
+  - inverter `/Ac/Out/L1/P = 0`
+  - inverter `/Ac/Out/L1/I = 0`
+  - Venus GUIv2 Inverter / Charger card renders as `Pass-thru`
 
 ## Post-Completion
 

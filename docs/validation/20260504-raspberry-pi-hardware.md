@@ -52,15 +52,18 @@ Inverter/servicecalc state after the GUI/VRM follow-up fix:
 ```text
 com.victronenergy.inverter.ep760_32 /Connected: 1
 com.victronenergy.inverter.ep760_32 /Mode: 3
-com.victronenergy.inverter.ep760_32 /State: 9
+com.victronenergy.inverter.ep760_32 /State: 8
 com.victronenergy.inverter.ep760_32 /Ac/Out/L1/P: 0W
 com.victronenergy.inverter.ep760_32 /Ac/Out/L1/V: 231.5V
-com.victronenergy.inverter.ep760_32 /Ac/Out/L1/I: 0.1A
+com.victronenergy.inverter.ep760_32 /Ac/Out/L1/I: 0A
 com.victronenergy.system /Ac/HasAcLoads: 1
 com.victronenergy.system /Ac/Grid/L1/Power: 380W
 com.victronenergy.system /Ac/Consumption/L1/Power: 380W
 com.victronenergy.system /Ac/ConsumptionOnOutput/L1/Power: 0W
 ```
+
+After commit `3d7f92e`, the Codex in-app browser showed Venus GUIv2 rendering the Inverter / Charger
+card as `Pass-thru` with Grid and AC Loads both around `332W`.
 
 ## Validation Performed
 
@@ -87,6 +90,8 @@ com.victronenergy.system /Ac/ConsumptionOnOutput/L1/Power: 0W
 - After live deploy, corrected inverter output mapping to use BLUETTI `inv_output_power_w` instead of
   duplicating `ac_load_power_w`; this keeps Total consumption from double-counting grid passthrough
   load.
+- Corrected inverter state mapping so grid passthrough publishes `/State = 8` (`Pass-thru`) instead
+  of `/State = 9` (`Inverting`) when real inverter output power is zero.
 - Installed and configured `ntp` through `install-venus.sh`. `/etc/ntp.conf` now has the gateway NTP
   marker block with `time.cloudflare.com`, `time.google.com`, `0.pool.ntp.org`, and `1.pool.ntp.org`;
   the local hardware clock fallback is commented out.
@@ -117,9 +122,8 @@ com.victronenergy.system /Ac/ConsumptionOnOutput/L1/Power: 0W
 
 ## Pending User Confirmation
 
-- Re-check local Venus GUI after commit `154033a`: Battery and AC Input were already confirmed by
-  user; inverter should no longer stay off, and AC-load presence should be visible through the Venus
-  system AC-load surface.
+- Re-check local Venus GUI after commit `3d7f92e`: Battery, AC Input, AC Loads, and Inverter/Charger
+  are visible in Codex in-app browser; Inverter/Charger renders as `Pass-thru`.
 - Re-check VRM Portal or VRM mobile app after commit `154033a`: Battery and Total consumption were
   already confirmed by user; Grid/AC Input and inverter/output blocks need confirmation after the
   inverter service and NTP fixes.
