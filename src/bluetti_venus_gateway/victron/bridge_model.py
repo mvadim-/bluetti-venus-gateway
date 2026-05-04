@@ -10,6 +10,10 @@ from bluetti_venus_gateway.telemetry.core import parse_iso8601
 
 SCHEMA_VERSION = 1
 DEFAULT_PRODUCT_ID = 0
+INVERTER_OUTPUT_EPSILON_W = 5.0
+SYSTEM_STATE_OFF = 0
+SYSTEM_STATE_PASS_THROUGH = 8
+SYSTEM_STATE_INVERTING = 9
 
 
 @dataclass(frozen=True)
@@ -216,14 +220,12 @@ def _build_inverter_values(
 ) -> dict[str, Any]:
     load_power = _pick_inverter_output_power(snapshot)
     load_voltage = _pick_number(snapshot, "inv_output_voltage_v", "load_voltage_v", "grid_voltage_v")
-    load_current = _pick_number(snapshot, "inv_output_current_a", "load_current_a") or _calculate_current(
-        load_power,
-        load_voltage,
-    )
+    load_current = _pick_inverter_output_current(snapshot, load_power=load_power, load_voltage=load_voltage)
     frequency = _pick_number(snapshot, "inv_output_freq_hz", "grid_freq_hz")
     dc_power = -load_power if load_power is not None else None
     dc_current = _calculate_current(dc_power, battery_voltage)
     connected = 1 if any(value is not None for value in (load_power, load_voltage, load_current, frequency)) else 0
+    state = _derive_inverter_state(snapshot=snapshot, connected=connected == 1, inverter_power=load_power)
     return {
         "/Connected": connected,
         "/CustomName": settings.inverter_custom_name,
@@ -234,7 +236,7 @@ def _build_inverter_values(
         "/ProductId": settings.product_id,
         "/ProductName": settings.inverter_product_name,
         "/Serial": f"{serial}-inverter",
-        "/State": 9 if connected else 0,
+        "/State": state,
         "/Dc/0/Voltage": battery_voltage,
         "/Dc/0/Current": dc_current,
         "/Dc/0/Power": dc_power,
@@ -255,6 +257,38 @@ def _pick_inverter_output_power(snapshot: dict[str, Any]) -> float | None:
     if ac_load_power is not None and grid_power is None:
         return ac_load_power
     return None
+
+
+def _pick_inverter_output_current(
+    snapshot: dict[str, Any],
+    *,
+    load_power: float | None,
+    load_voltage: float | None,
+) -> float | None:
+    if load_power is not None and abs(load_power) <= INVERTER_OUTPUT_EPSILON_W:
+        return 0.0
+    return _pick_number(snapshot, "inv_output_current_a", "load_current_a") or _calculate_current(
+        load_power,
+        load_voltage,
+    )
+
+
+def _derive_inverter_state(
+    *,
+    snapshot: dict[str, Any],
+    connected: bool,
+    inverter_power: float | None,
+) -> int:
+    if not connected:
+        return SYSTEM_STATE_OFF
+    if inverter_power is not None and abs(inverter_power) > INVERTER_OUTPUT_EPSILON_W:
+        return SYSTEM_STATE_INVERTING
+    grid_power = _pick_number(snapshot, "grid_power_w", "grid_power_w_phase_1", "grid_charge_power_w")
+    grid_voltage = _pick_number(snapshot, "grid_voltage_v")
+    grid_current = _pick_number(snapshot, "grid_current_a")
+    if any(value is not None for value in (grid_power, grid_voltage, grid_current)):
+        return SYSTEM_STATE_PASS_THROUGH
+    return SYSTEM_STATE_INVERTING
 
 
 def _build_vebus_values(

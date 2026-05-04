@@ -242,6 +242,16 @@
   - latest telemetry age `1s`
   - Battery, AC Input, and AC Load D-Bus services present
   - Battery `/Connected = 1`, `/Alarms/HighVoltage = 0`, `/Alarms/LowVoltage = 0`
+## [2026-05-04 20:55] Fix inverter passthrough state mapping
+- Fixed `com.victronenergy.inverter.ep760_32` state mapping for EP760 grid passthrough
+- The bridge now publishes `/State = 8` (`Pass-thru` in Venus GUIv2) when grid input is present and
+  real inverter output power is zero or near zero
+- The bridge keeps `/State = 9` (`Inverting`) only when `inv_output_power_w` or `inverter_power_w`
+  indicates real inverter output above the noise threshold
+- Suppressed near-zero inverter output current when output power is effectively zero, so passthrough
+  does not show a misleading inverter AC output current
+- Added unit coverage for passthrough and real inverter-output states
+
 ## [2026-05-04 17:06] Record inverter service Raspberry Pi validation
 - Updated Raspberry Pi hardware validation notes after deploying commit `154033a`
 - Recorded user findings:
