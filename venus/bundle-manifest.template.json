@@ -1,0 +1,7 @@
+{
+  "name": "bluetti-venus-gateway",
+  "version": "@VERSION@",
+  "repo_commit": "@REPO_COMMIT@",
+  "target": "rpi5-aarch64-venus-os",
+  "created_at": "@CREATED_AT@"
+}

@@ -8,10 +8,28 @@ CONFIG_FILE="$DATA_DIR/bluetti-gateway.env"
 SERVICE_ROOT="${BLUETTI_SERVICE_ROOT:-/service}"
 STATE_DIR="$DATA_DIR/state"
 DRY_RUN=0
+OFFLINE_BUNDLE=""
 
-if [ "${1:-}" = "--dry-run" ]; then
-  DRY_RUN=1
-fi
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --dry-run)
+      DRY_RUN=1
+      shift
+      ;;
+    --offline-bundle)
+      OFFLINE_BUNDLE="${2:-}"
+      if [ -z "$OFFLINE_BUNDLE" ]; then
+        echo "--offline-bundle requires a path" >&2
+        exit 1
+      fi
+      shift 2
+      ;;
+    *)
+      echo "unknown argument: $1" >&2
+      exit 1
+      ;;
+  esac
+done
 
 log() {
   printf '%s\n' "$*"
@@ -25,6 +43,27 @@ run() {
     return 0
   fi
   "$@"
+}
+
+apply_or_verify_offline_bundle() {
+  if [ -z "$OFFLINE_BUNDLE" ]; then
+    return 0
+  fi
+  # shellcheck source=/dev/null
+  . "$APP_DIR/venus/lib/offline-bundle.sh"
+  if [ "$DRY_RUN" = "1" ]; then
+    extract_dir="$(mktemp -d)"
+    verify_offline_bundle "$OFFLINE_BUNDLE" "$extract_dir"
+    rm -rf "$extract_dir"
+    log "Verified offline bundle: $OFFLINE_BUNDLE"
+    return 0
+  fi
+  if [ "${BLUETTI_BUNDLE_APPLIED:-0}" = "1" ]; then
+    return 0
+  fi
+  log "Applying offline bundle: $OFFLINE_BUNDLE"
+  apply_offline_bundle "$OFFLINE_BUNDLE" "$APP_DIR"
+  BLUETTI_BUNDLE_APPLIED=1 exec "$APP_DIR/venus/install-venus.sh"
 }
 
 require_command() {
@@ -43,6 +82,10 @@ require_python_import() {
 }
 
 check_prerequisites() {
+  if [ "$DRY_RUN" = "1" ]; then
+    log "dry-run: skipping Venus OS prerequisite checks"
+    return 0
+  fi
   missing=0
   for cmd in python3 openssl dbus-send; do
     require_command "$cmd" || missing=1
@@ -116,6 +159,7 @@ write_install_state() {
 EOF
 }
 
+apply_or_verify_offline_bundle
 log "Installing BLUETTI Venus Gateway from $APP_DIR"
 check_prerequisites
 run mkdir -p "$DATA_DIR" "$DATA_DIR/cache" "$DATA_DIR/certs" "$DATA_DIR/logs" "$STATE_DIR" "$RUN_DIR"

@@ -39,3 +39,21 @@ vi /data/bluetti-gateway/bluetti-gateway.env
 ```
 
 See [docs/deploy/venus-gateway-rpi5.md](docs/deploy/venus-gateway-rpi5.md).
+
+## Offline Bundle
+
+Build a recovery artifact on a development machine:
+
+```bash
+./venus/build-offline-bundle.sh
+```
+
+Apply it on Venus OS from an existing checkout:
+
+```bash
+cd /data/bluetti-venus-gateway
+./venus/update-venus.sh --offline-bundle /data/bluetti-venus-gateway-rpi5-aarch64-v0.1.0.tar.gz
+```
+
+The bundle contains source, Venus scripts, service definitions, a manifest, package prerequisites,
+and checksums. It does not include local config, BLUETTI credentials, certs, cache, or logs.

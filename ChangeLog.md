@@ -1,5 +1,24 @@
 # ChangeLog
 
+## [2026-05-04 15:44] Complete offline bundle install path
+- Added offline bundle verification/apply helper for manifest and checksum validation
+- Updated `build-offline-bundle.sh` to include:
+  - app source and Venus scripts under `app/`
+  - `manifest.json` generated from `venus/bundle-manifest.template.json`
+  - `system-packages.txt`
+  - `checksums.txt`
+- Excluded local secrets, cache, certs, logs, Python bytecode, supervise state, and macOS metadata from bundle artifacts
+- Added `--offline-bundle` and `--dry-run --offline-bundle` handling to install/update scripts
+- Updated README and Raspberry Pi deploy docs for live runtime and offline bundle recovery
+- Verified locally with:
+  - `bash -n venus/install-venus.sh venus/update-venus.sh venus/build-offline-bundle.sh venus/lib/offline-bundle.sh`
+  - `env PYTHONPATH=src python3 -m unittest discover -s tests`
+  - `python3 -m compileall -q src`
+  - `./venus/build-offline-bundle.sh`
+  - `./venus/update-venus.sh --dry-run --offline-bundle dist/bluetti-venus-gateway-rpi5-aarch64-v0.1.0.tar.gz`
+  - valid, missing, corrupt, and apply-to-temp bundle checks through `venus/lib/offline-bundle.sh`
+  - `git diff --check`
+
 ## [2026-05-01 21:37] Attach Venus D-Bus services to GLib main loop
 - Added D-Bus GLib main loop bootstrap before creating Venus `SystemBus` connections for `vedbus`
 - Added lightweight GLib event processing in the D-Bus bridge refresh loop so exported services can respond to D-Bus traffic
