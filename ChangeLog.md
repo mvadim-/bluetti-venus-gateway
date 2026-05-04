@@ -290,6 +290,23 @@
   Inverter-to-AC-Loads flow while Inverter / Charger remains `Pass-thru`
 - Updated Raspberry Pi hardware validation notes with the live evidence
 
+## [2026-05-04 21:33] Audit Victron model contracts against BLUETTI telemetry
+- Audited live BLUETTI snapshot fields against Venus OS v3.72 systemcalc and VRM logger service
+  models
+- Added `docs/validation/20260504-victron-model-audit.md` with supported, derived, and intentionally
+  unsupported Victron paths
+- Aligned `inverter`, `multi`, and optional `vebus` compatibility outputs:
+  - shared pass-through/inverting state contract
+  - full single-phase AC input paths
+  - battery SOC and temperature paths where VRM logs them
+- Added contract unit coverage for Battery, Grid, AC Loads, Inverter, Multi, and optional VE.Bus
+  paths required by Venus systemcalc/VRM logger
+- Verified local Venus GUIv2 through the Codex in-app browser
+- Verified locally with:
+  - `env PYTHONPATH=src python3 -m unittest discover -s tests`
+  - `python3 -m compileall -q src`
+  - `git diff --check`
+
 ## [2026-05-04 20:55] Fix inverter passthrough state mapping
 - Fixed `com.victronenergy.inverter.ep760_32` state mapping for EP760 grid passthrough
 - The bridge now publishes `/State = 8` (`Pass-thru` in Venus GUIv2) when grid input is present and

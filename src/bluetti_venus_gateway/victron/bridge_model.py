@@ -82,6 +82,8 @@ def build_venus_bridge_payload(
         settings=settings,
         serial=serial,
         battery_voltage=battery["/Dc/0/Voltage"],
+        battery_soc=battery["/Soc"],
+        battery_temperature=battery["/Dc/0/Temperature"],
     )
 
     payload = {
@@ -117,6 +119,8 @@ def build_venus_bridge_payload(
                 settings=settings,
                 serial=serial,
                 battery_voltage=battery["/Dc/0/Voltage"],
+                battery_soc=battery["/Soc"],
+                battery_temperature=battery["/Dc/0/Temperature"],
             ),
         }
     if settings.enable_vebus_compat:
@@ -127,6 +131,8 @@ def build_venus_bridge_payload(
                 settings=settings,
                 serial=serial,
                 battery_voltage=battery["/Dc/0/Voltage"],
+                battery_soc=battery["/Soc"],
+                battery_temperature=battery["/Dc/0/Temperature"],
             ),
         }
     if not _is_envelope_fresh(envelope):
@@ -240,6 +246,8 @@ def _build_inverter_values(
     settings: VenusBridgeSettings,
     serial: str,
     battery_voltage: float | None,
+    battery_soc: float | None,
+    battery_temperature: float | None,
 ) -> dict[str, Any]:
     load_power = _pick_inverter_output_power(snapshot)
     load_voltage = _pick_number(snapshot, "inv_output_voltage_v", "load_voltage_v", "grid_voltage_v")
@@ -265,9 +273,11 @@ def _build_inverter_values(
         "/ProductName": settings.inverter_product_name,
         "/Serial": f"{serial}-inverter",
         "/State": state,
+        "/Soc": battery_soc,
         "/Dc/0/Voltage": battery_voltage,
         "/Dc/0/Current": dc_current,
         "/Dc/0/Power": dc_power,
+        "/Dc/0/Temperature": battery_temperature,
         "/Ac/NumberOfAcInputs": 1,
         "/Ac/ActiveIn/ActiveInput": active_input,
         "/Ac/ActiveIn/Connected": 1 if grid_connected else 0,
@@ -277,6 +287,9 @@ def _build_inverter_values(
         "/Ac/In/1/Connected": 1 if grid_connected else 0,
         "/Ac/In/1/Type": AC_INPUT_TYPE_GRID,
         "/Ac/In/1/L1/V": grid_voltage,
+        "/Ac/In/1/L1/I": grid_current,
+        "/Ac/In/1/L1/P": grid_power,
+        "/Ac/In/1/L1/F": frequency,
         "/Ac/Out/L1/V": load_voltage,
         "/Ac/Out/L1/I": load_current,
         "/Ac/Out/L1/P": load_power,
@@ -334,6 +347,8 @@ def _build_vebus_values(
     settings: VenusBridgeSettings,
     serial: str,
     battery_voltage: float | None,
+    battery_soc: float | None,
+    battery_temperature: float | None,
 ) -> dict[str, Any]:
     grid_power = _pick_number(snapshot, "grid_power_w", "grid_power_w_phase_1", "grid_charge_power_w")
     grid_voltage = _pick_number(snapshot, "grid_voltage_v")
@@ -342,6 +357,10 @@ def _build_vebus_values(
     load_voltage = _pick_number(snapshot, "load_voltage_v", "inv_output_voltage_v", "grid_voltage_v")
     load_current = _pick_number(snapshot, "load_current_a", "inv_output_current_a") or _calculate_current(load_power, load_voltage)
     connected = 1 if any(value is not None for value in (grid_power, load_power, load_voltage, load_current)) else 0
+    inverter_power = _pick_inverter_output_power(snapshot)
+    state = _derive_inverter_state(snapshot=snapshot, connected=connected == 1, inverter_power=inverter_power)
+    dc_power = -inverter_power if inverter_power is not None else None
+    dc_current = _calculate_current(dc_power, battery_voltage)
     active_input = 0 if any(value is not None for value in (grid_power, grid_voltage, grid_current)) else 0xF0
     return {
         "/Connected": connected,
@@ -350,15 +369,26 @@ def _build_vebus_values(
         "/ProductId": settings.product_id,
         "/ProductName": settings.vebus_product_name,
         "/Serial": f"{serial}-vebus",
-        "/State": 9 if connected else 0,
+        "/State": state,
+        "/Mode": 3 if connected else 4,
+        "/DeviceOffReason": 0,
+        "/Soc": battery_soc,
         "/Dc/0/Voltage": battery_voltage,
-        "/Dc/0/Current": 0.0,
-        "/Dc/0/Power": 0.0,
+        "/Dc/0/Current": dc_current,
+        "/Dc/0/Power": dc_power,
+        "/Dc/0/Temperature": battery_temperature,
+        "/Ac/NumberOfAcInputs": 1,
         "/Ac/ActiveIn/ActiveInput": active_input,
         "/Ac/ActiveIn/Connected": 1 if active_input != 0xF0 else 0,
         "/Ac/ActiveIn/L1/V": grid_voltage,
         "/Ac/ActiveIn/L1/I": grid_current,
         "/Ac/ActiveIn/L1/P": grid_power,
+        "/Ac/In/1/Connected": 1 if active_input != 0xF0 else 0,
+        "/Ac/In/1/Type": AC_INPUT_TYPE_GRID,
+        "/Ac/In/1/L1/V": grid_voltage,
+        "/Ac/In/1/L1/I": grid_current,
+        "/Ac/In/1/L1/P": grid_power,
+        "/Ac/In/1/L1/F": _pick_number(snapshot, "grid_freq_hz"),
         "/Ac/Out/L1/V": load_voltage,
         "/Ac/Out/L1/I": load_current,
         "/Ac/Out/L1/P": load_power,
@@ -372,6 +402,8 @@ def _build_multi_values(
     settings: VenusBridgeSettings,
     serial: str,
     battery_voltage: float | None,
+    battery_soc: float | None,
+    battery_temperature: float | None,
 ) -> dict[str, Any]:
     grid_power = _pick_number(snapshot, "grid_power_w", "grid_power_w_phase_1", "grid_charge_power_w")
     grid_voltage = _pick_number(snapshot, "grid_voltage_v")
@@ -405,9 +437,11 @@ def _build_multi_values(
         "/ProductName": settings.multi_product_name,
         "/Serial": f"{serial}-multi",
         "/State": state,
+        "/Soc": battery_soc,
         "/Dc/0/Voltage": battery_voltage,
         "/Dc/0/Current": dc_current,
         "/Dc/0/Power": dc_power,
+        "/Dc/0/Temperature": battery_temperature,
         "/Ac/NumberOfAcInputs": 1,
         "/Ac/ActiveIn/ActiveInput": active_input,
         "/Ac/ActiveIn/Connected": 1 if grid_connected else 0,

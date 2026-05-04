@@ -17,6 +17,7 @@ class BridgeModelTests(unittest.TestCase):
                     "soc": 76,
                     "battery_voltage_v": 52.1,
                     "battery_current_a": -12.4,
+                    "pack_avg_temp_c": 24.0,
                     "grid_voltage_v": 231.0,
                     "grid_current_a": 4.2,
                     "grid_freq_hz": 50.0,
@@ -48,12 +49,18 @@ class BridgeModelTests(unittest.TestCase):
         self.assertEqual(payload["venus_inverter"]["values"]["/Ac/ActiveIn/Connected"], 1)
         self.assertEqual(payload["venus_inverter"]["values"]["/Ac/ActiveIn/L1/P"], 920.0)
         self.assertEqual(payload["venus_inverter"]["values"]["/Ac/In/1/Type"], 1)
+        self.assertEqual(payload["venus_inverter"]["values"]["/Ac/In/1/L1/I"], 4.2)
+        self.assertEqual(payload["venus_inverter"]["values"]["/Ac/In/1/L1/P"], 920.0)
         self.assertEqual(payload["venus_inverter"]["values"]["/Ac/Out/L1/P"], 0.0)
         self.assertEqual(payload["venus_inverter"]["values"]["/Ac/Out/L1/I"], 0.0)
+        self.assertEqual(payload["venus_inverter"]["values"]["/Soc"], 76.0)
+        self.assertEqual(payload["venus_inverter"]["values"]["/Dc/0/Temperature"], 24.0)
         self.assertEqual(payload["venus_inverter"]["values"]["/Mode"], 3)
         self.assertEqual(payload["venus_inverter"]["values"]["/State"], 8)
         self.assertEqual(payload["venus_multi"]["values"]["/Ac/In/1/L1/P"], 920.0)
         self.assertEqual(payload["venus_multi"]["values"]["/Ac/Out/L1/P"], 650.0)
+        self.assertEqual(payload["venus_multi"]["values"]["/Soc"], 76.0)
+        self.assertEqual(payload["venus_multi"]["values"]["/Dc/0/Temperature"], 24.0)
         self.assertEqual(payload["venus_multi"]["values"]["/State"], 8)
 
     def test_build_venus_bridge_payload_marks_inverter_state_when_output_power_is_real(self) -> None:
@@ -86,12 +93,26 @@ class BridgeModelTests(unittest.TestCase):
             {
                 "device_sn": "EP760SN",
                 "freshness": {"state": "fresh", "age_seconds": 2},
-                "snapshot": {"grid_power_w": 100.0, "load_voltage_v": 230.0, "ac_load_power_w": 460.0},
+                "snapshot": {
+                    "soc": 88.0,
+                    "battery_voltage_v": 103.0,
+                    "grid_power_w": 100.0,
+                    "grid_voltage_v": 230.0,
+                    "load_voltage_v": 230.0,
+                    "ac_load_power_w": 460.0,
+                    "inv_output_power_w": 0.0,
+                },
             },
             settings=VenusBridgeSettings(enable_vebus_compat=True),
         )
 
         self.assertEqual(payload["venus_vebus"]["service_name"], "com.victronenergy.vebus.ep760_32")
+        self.assertEqual(payload["venus_vebus"]["values"]["/State"], 8)
+        self.assertEqual(payload["venus_vebus"]["values"]["/Mode"], 3)
+        self.assertEqual(payload["venus_vebus"]["values"]["/Soc"], 88.0)
+        self.assertEqual(payload["venus_vebus"]["values"]["/Ac/In/1/Type"], 1)
+        self.assertEqual(payload["venus_vebus"]["values"]["/Ac/In/1/L1/P"], 100.0)
+        self.assertEqual(payload["venus_vebus"]["values"]["/Ac/Out/L1/P"], 460.0)
         self.assertEqual(payload["venus_vebus"]["values"]["/Ac/Out/L1/I"], 2.0)
 
     def test_build_venus_bridge_payload_marks_stale_disconnected(self) -> None:
@@ -138,6 +159,125 @@ class BridgeModelTests(unittest.TestCase):
                 "com.victronenergy.multi.ep760_32",
             ],
         )
+
+    def test_bridge_payload_includes_vrm_and_systemcalc_contract_paths(self) -> None:
+        payload = build_venus_bridge_payload(
+            {
+                "device_sn": "EP760SN",
+                "freshness": {"state": "fresh", "age_seconds": 2},
+                "snapshot": {
+                    "soc": 100,
+                    "battery_voltage_v": 103.0,
+                    "battery_current_a": 0.0,
+                    "pack_avg_temp_c": 21.0,
+                    "grid_voltage_v": 230.0,
+                    "grid_current_a": 2.0,
+                    "grid_freq_hz": 50.0,
+                    "grid_power_w": 460.0,
+                    "grid_charge_energy_total_kwh": 2383.0,
+                    "grid_feedback_energy_total_kwh": 9.8,
+                    "ac_load_power_w": 455.0,
+                    "load_voltage_v": 231.0,
+                    "load_current_a": 1.97,
+                    "ac_energy_kwh": 2048.0,
+                    "inv_output_power_w": 0.0,
+                    "inv_output_voltage_v": 231.0,
+                    "inv_output_freq_hz": 50.0,
+                },
+            },
+            settings=VenusBridgeSettings(enable_vebus_compat=True),
+        )
+
+        expected_paths = {
+            "venus_battery": {
+                "/Connected",
+                "/Soc",
+                "/State",
+                "/Dc/0/Voltage",
+                "/Dc/0/Current",
+                "/Dc/0/Power",
+                "/Dc/0/Temperature",
+                "/Alarms/LowVoltage",
+                "/Alarms/HighVoltage",
+                "/Alarms/LowSoc",
+            },
+            "venus_grid": {
+                "/Ac/L1/Power",
+                "/Ac/L1/Voltage",
+                "/Ac/L1/Current",
+                "/Ac/Frequency",
+                "/Ac/L1/Energy/Forward",
+                "/Ac/L1/Energy/Reverse",
+                "/Ac/Energy/Forward",
+                "/Ac/Energy/Reverse",
+            },
+            "venus_ac_load": {
+                "/Position",
+                "/Ac/L1/Power",
+                "/Ac/L1/Voltage",
+                "/Ac/L1/Current",
+                "/Ac/Frequency",
+                "/Ac/L1/Energy/Forward",
+                "/Ac/Energy/Forward",
+            },
+            "venus_inverter": {
+                "/Mode",
+                "/State",
+                "/Soc",
+                "/Dc/0/Voltage",
+                "/Dc/0/Current",
+                "/Dc/0/Power",
+                "/Dc/0/Temperature",
+                "/Ac/ActiveIn/ActiveInput",
+                "/Ac/In/1/Type",
+                "/Ac/In/1/L1/P",
+                "/Ac/In/1/L1/I",
+                "/Ac/In/1/L1/F",
+                "/Ac/Out/L1/P",
+                "/Ac/Out/L1/I",
+                "/Ac/Out/L1/V",
+                "/Ac/Out/L1/F",
+            },
+            "venus_multi": {
+                "/Mode",
+                "/State",
+                "/Soc",
+                "/Dc/0/Voltage",
+                "/Dc/0/Current",
+                "/Dc/0/Power",
+                "/Dc/0/Temperature",
+                "/Ac/ActiveIn/ActiveInput",
+                "/Ac/In/1/Type",
+                "/Ac/In/1/L1/P",
+                "/Ac/In/1/L1/I",
+                "/Ac/In/1/L1/F",
+                "/Ac/Out/L1/P",
+                "/Ac/Out/L1/I",
+                "/Ac/Out/L1/V",
+                "/Ac/Out/L1/F",
+            },
+            "venus_vebus": {
+                "/Mode",
+                "/State",
+                "/Soc",
+                "/Dc/0/Voltage",
+                "/Dc/0/Current",
+                "/Dc/0/Power",
+                "/Dc/0/Temperature",
+                "/Ac/ActiveIn/ActiveInput",
+                "/Ac/In/1/Type",
+                "/Ac/In/1/L1/P",
+                "/Ac/In/1/L1/I",
+                "/Ac/In/1/L1/F",
+                "/Ac/Out/L1/P",
+                "/Ac/Out/L1/I",
+                "/Ac/Out/L1/V",
+            },
+        }
+
+        for key, paths in expected_paths.items():
+            with self.subTest(service=key):
+                self.assertTrue(paths.issubset(payload[key]["values"]))
 
 
 if __name__ == "__main__":
