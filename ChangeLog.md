@@ -1,5 +1,17 @@
 # ChangeLog
 
+## [2026-05-04 16:29] Persist boot repair through Venus rc.local
+- Fixed reboot recovery found during Raspberry Pi Task 13 validation:
+  - `/service` is a tmpfs on Venus OS, so service symlinks disappear after reboot
+  - `bluetti-repair-on-boot` cannot repair service links if its own `/service` symlink is gone
+- Updated installer to add a persistent `/data/rc.local` hook that runs `repair-if-needed.sh` during Venus `custom-rc-late.sh`
+- The hook logs to `bluetti-repair-on-boot.log` and preserves config/cache/certs
+- Verified locally with:
+  - `bash -n venus/install-venus.sh venus/repair-if-needed.sh venus/services/bluetti-repair-on-boot/run`
+  - `BLUETTI_RC_LOCAL=/private/tmp/bluetti-test-rc.local ./venus/install-venus.sh --dry-run`
+  - `env PYTHONPATH=src python3 -m unittest discover -s tests`
+  - `git diff --check`
+
 ## [2026-05-04 16:21] Mark D-Bus services stale when collector stops
 - Fixed D-Bus bridge stale behavior found during Raspberry Pi Task 13 validation:
   - bridge now recalculates snapshot freshness from `received_at` on every publish cycle

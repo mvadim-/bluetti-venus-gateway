@@ -159,6 +159,51 @@ write_install_state() {
 EOF
 }
 
+install_boot_hook() {
+  rc_local="${BLUETTI_RC_LOCAL:-/data/rc.local}"
+  marker_begin="# BEGIN BLUETTI Venus Gateway"
+  marker_end="# END BLUETTI Venus Gateway"
+  if [ "$DRY_RUN" = "1" ]; then
+    log "dry-run: install boot hook in $rc_local"
+    return 0
+  fi
+  if [ -f "$rc_local" ] && grep -q "$marker_begin" "$rc_local"; then
+    return 0
+  fi
+  tmp="$STATE_DIR/rc.local.tmp"
+  mkdir -p "$(dirname "$rc_local")" "$STATE_DIR"
+  {
+    if [ -f "$rc_local" ]; then
+      first_line="$(sed -n '1p' "$rc_local")"
+      case "$first_line" in
+        '#!'*) printf '%s\n' "$first_line" ;;
+        *) printf '%s\n' '#!/bin/sh' ;;
+      esac
+    else
+      printf '%s\n' '#!/bin/sh'
+    fi
+    cat <<EOF
+$marker_begin
+if [ -x "$APP_DIR/venus/repair-if-needed.sh" ]; then
+  mkdir -p "$DATA_DIR/logs"
+  "$APP_DIR/venus/repair-if-needed.sh" >>"$DATA_DIR/logs/bluetti-repair-on-boot.log" 2>&1 || true
+fi
+$marker_end
+EOF
+    if [ -f "$rc_local" ]; then
+      first_line="$(sed -n '1p' "$rc_local")"
+      case "$first_line" in
+        '#!'*) tail -n +2 "$rc_local" ;;
+        *) cat "$rc_local" ;;
+      esac
+    else
+      printf '%s\n' 'exit 0'
+    fi
+  } >"$tmp"
+  mv "$tmp" "$rc_local"
+  chmod 755 "$rc_local"
+}
+
 apply_or_verify_offline_bundle
 log "Installing BLUETTI Venus Gateway from $APP_DIR"
 check_prerequisites
@@ -176,6 +221,7 @@ install_service bluetti-collector
 install_service bluetti-dbus-bridge
 install_service bluetti-repair-on-boot
 write_install_state
+install_boot_hook
 
 start_service_if_ready bluetti-collector
 start_service_if_ready bluetti-dbus-bridge
