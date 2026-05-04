@@ -22,6 +22,7 @@ class BridgeModelTests(unittest.TestCase):
                     "grid_freq_hz": 50.0,
                     "grid_power_w": 920,
                     "ac_load_power_w": 650,
+                    "inv_output_power_w": 0,
                     "load_voltage_v": 230.0,
                     "load_current_a": 2.8,
                 },
@@ -38,7 +39,7 @@ class BridgeModelTests(unittest.TestCase):
         self.assertEqual(payload["venus_battery"]["values"]["/Dc/0/Power"], -646.04)
         self.assertEqual(payload["venus_grid"]["values"]["/Ac/L1/Power"], 920.0)
         self.assertEqual(payload["venus_ac_load"]["values"]["/Ac/L1/Current"], 2.8)
-        self.assertEqual(payload["venus_inverter"]["values"]["/Ac/Out/L1/P"], 650.0)
+        self.assertEqual(payload["venus_inverter"]["values"]["/Ac/Out/L1/P"], 0.0)
         self.assertEqual(payload["venus_inverter"]["values"]["/Mode"], 3)
         self.assertEqual(payload["venus_inverter"]["values"]["/State"], 9)
 

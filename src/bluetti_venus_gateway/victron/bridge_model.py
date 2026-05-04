@@ -214,9 +214,9 @@ def _build_inverter_values(
     serial: str,
     battery_voltage: float | None,
 ) -> dict[str, Any]:
-    load_power = _pick_number(snapshot, "ac_load_power_w", "ac_power_w", "inv_output_power_w")
-    load_voltage = _pick_number(snapshot, "load_voltage_v", "inv_output_voltage_v", "grid_voltage_v")
-    load_current = _pick_number(snapshot, "load_current_a", "inv_output_current_a") or _calculate_current(
+    load_power = _pick_inverter_output_power(snapshot)
+    load_voltage = _pick_number(snapshot, "inv_output_voltage_v", "load_voltage_v", "grid_voltage_v")
+    load_current = _pick_number(snapshot, "inv_output_current_a", "load_current_a") or _calculate_current(
         load_power,
         load_voltage,
     )
@@ -244,6 +244,17 @@ def _build_inverter_values(
         "/Ac/Out/L1/S": _calculate_power(load_voltage, load_current),
         "/Ac/Out/L1/F": frequency,
     }
+
+
+def _pick_inverter_output_power(snapshot: dict[str, Any]) -> float | None:
+    inverter_power = _pick_number(snapshot, "inv_output_power_w", "inverter_power_w")
+    if inverter_power is not None:
+        return inverter_power
+    ac_load_power = _pick_number(snapshot, "ac_load_power_w", "ac_power_w")
+    grid_power = _pick_number(snapshot, "grid_power_w", "grid_power_w_phase_1", "grid_charge_power_w")
+    if ac_load_power is not None and grid_power is None:
+        return ac_load_power
+    return None
 
 
 def _build_vebus_values(

@@ -242,6 +242,20 @@
   - latest telemetry age `1s`
   - Battery, AC Input, and AC Load D-Bus services present
   - Battery `/Connected = 1`, `/Alarms/HighVoltage = 0`, `/Alarms/LowVoltage = 0`
+## [2026-05-04 17:04] Avoid double-counting inverter passthrough load
+- During live Raspberry Pi validation of `com.victronenergy.inverter.ep760_32`, systemcalc
+  `/Ac/Consumption/L1/Power` became approximately `grid + inverter output`
+- Updated inverter projection to prefer real inverter-output fields:
+  - `inv_output_power_w`
+  - `inverter_power_w`
+  - `inv_output_current_a`
+- Kept `ac_load_power_w` on the standalone `acload` service instead of reusing it as inverter output
+  while grid input is present
+- Verified locally with:
+  - `env PYTHONPATH=src python3 -m unittest discover -s tests`
+  - `python3 -m compileall -q src`
+  - `git diff --check`
+
 ## [2026-05-04 16:58] Add Venus inverter service and installer NTP setup
 - Continued Raspberry Pi Task 13 follow-up from user GUI/VRM validation
 - Added default `com.victronenergy.inverter.ep760_32` publishing with Venus-compatible AC output
