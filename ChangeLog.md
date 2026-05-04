@@ -266,6 +266,18 @@
   - `python3 -m compileall -q src`
   - `git diff --check`
 
+## [2026-05-04 21:13] Add Multi compatibility service for Venus systemcalc
+- Added `com.victronenergy.multi.ep760_32` compatibility output enabled by `BLUETTI_ENABLE_MULTI_COMPAT=1`
+  by default
+- Published Grid as Multi `/Ac/In/1` and AC Loads as Multi `/Ac/Out`, allowing Venus systemcalc and
+  VRM to derive the active AC source without relying on unsupported inverter active-input monitoring
+- Updated status output to report the Multi D-Bus service
+- Updated the Venus config/deploy examples and unit coverage for the new compatibility service
+- Verified locally with:
+  - `env PYTHONPATH=src python3 -m unittest discover -s tests`
+  - `python3 -m compileall -q src`
+  - `git diff --check`
+
 ## [2026-05-04 20:55] Fix inverter passthrough state mapping
 - Fixed `com.victronenergy.inverter.ep760_32` state mapping for EP760 grid passthrough
 - The bridge now publishes `/State = 8` (`Pass-thru` in Venus GUIv2) when grid input is present and

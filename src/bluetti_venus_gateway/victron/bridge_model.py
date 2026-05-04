@@ -24,6 +24,7 @@ class VenusBridgeSettings:
     grid_device_instance: int = 30
     acload_device_instance: int = 31
     inverter_device_instance: int = 32
+    multi_device_instance: int = 32
     vebus_device_instance: int = 32
     battery_custom_name: str = "BLUETTI EP760"
     grid_custom_name: str = "BLUETTI EP760 AC Input"
@@ -34,6 +35,7 @@ class VenusBridgeSettings:
     grid_product_name: str = "BLUETTI EP760 AC Input Bridge"
     acload_product_name: str = "BLUETTI EP760 AC Loads Bridge"
     inverter_product_name: str = "BLUETTI EP760 Inverter Bridge"
+    multi_product_name: str = "BLUETTI EP760 Multi Bridge"
     vebus_product_name: str = "BLUETTI EP760 VE.Bus Bridge"
     product_id: int = DEFAULT_PRODUCT_ID
     model_service_id: str = "ep760"
@@ -42,6 +44,7 @@ class VenusBridgeSettings:
     voltage_high_alarm_v: float | None = None
     soc_low_alarm_pct: float = 10.0
     enable_inverter_service: bool = True
+    enable_multi_compat: bool = True
     enable_vebus_compat: bool = False
 
 
@@ -51,11 +54,13 @@ def settings_from_gateway_config(config: Any) -> VenusBridgeSettings:
         grid_device_instance=config.grid_device_instance,
         acload_device_instance=config.acload_device_instance,
         inverter_device_instance=config.inverter_device_instance,
+        multi_device_instance=config.inverter_device_instance,
         battery_custom_name=config.battery_custom_name,
         grid_custom_name=config.grid_custom_name,
         acload_custom_name=config.acload_custom_name,
         inverter_custom_name=config.inverter_custom_name,
         enable_inverter_service=config.enable_inverter_service,
+        enable_multi_compat=config.enable_multi_compat,
         enable_vebus_compat=config.enable_vebus_compat,
     )
 
@@ -104,6 +109,16 @@ def build_venus_bridge_payload(
             "service_name": f"com.victronenergy.inverter.{settings.model_service_id}_{settings.inverter_device_instance}",
             "values": inverter,
         }
+    if settings.enable_multi_compat:
+        payload["venus_multi"] = {
+            "service_name": f"com.victronenergy.multi.{settings.model_service_id}_{settings.multi_device_instance}",
+            "values": _build_multi_values(
+                snapshot,
+                settings=settings,
+                serial=serial,
+                battery_voltage=battery["/Dc/0/Voltage"],
+            ),
+        }
     if settings.enable_vebus_compat:
         payload["venus_vebus"] = {
             "service_name": f"com.victronenergy.vebus.{settings.model_service_id}_{settings.vebus_device_instance}",
@@ -120,7 +135,7 @@ def build_venus_bridge_payload(
 
 
 def disconnect_venus_services(payload: dict[str, Any]) -> None:
-    for key in ("venus_battery", "venus_grid", "venus_ac_load", "venus_inverter", "venus_vebus"):
+    for key in ("venus_battery", "venus_grid", "venus_ac_load", "venus_inverter", "venus_multi", "venus_vebus"):
         service_payload = payload.get(key)
         if not isinstance(service_payload, dict):
             continue
@@ -130,7 +145,7 @@ def disconnect_venus_services(payload: dict[str, Any]) -> None:
 
 
 def iter_venus_service_payloads(payload: dict[str, Any]):
-    for key in ("venus_battery", "venus_grid", "venus_ac_load", "venus_inverter", "venus_vebus"):
+    for key in ("venus_battery", "venus_grid", "venus_ac_load", "venus_inverter", "venus_multi", "venus_vebus"):
         service_payload = payload.get(key) or {}
         service_name = str(service_payload.get("service_name") or "").strip()
         values = service_payload.get("values") or {}
@@ -348,6 +363,68 @@ def _build_vebus_values(
         "/Ac/Out/L1/I": load_current,
         "/Ac/Out/L1/P": load_power,
         "/Ac/Out/L1/S": _calculate_power(load_voltage, load_current),
+    }
+
+
+def _build_multi_values(
+    snapshot: dict[str, Any],
+    *,
+    settings: VenusBridgeSettings,
+    serial: str,
+    battery_voltage: float | None,
+) -> dict[str, Any]:
+    grid_power = _pick_number(snapshot, "grid_power_w", "grid_power_w_phase_1", "grid_charge_power_w")
+    grid_voltage = _pick_number(snapshot, "grid_voltage_v")
+    grid_current = _pick_number(snapshot, "grid_current_a") or _calculate_current(grid_power, grid_voltage)
+    grid_frequency = _pick_number(snapshot, "grid_freq_hz")
+    grid_connected = any(value is not None for value in (grid_power, grid_voltage, grid_current, grid_frequency))
+    active_input = 0 if grid_connected else AC_INPUT_NOT_CONNECTED
+
+    output_power = _pick_number(snapshot, "ac_load_power_w", "ac_power_w", "inv_output_power_w")
+    output_voltage = _pick_number(snapshot, "load_voltage_v", "inv_output_voltage_v", "grid_voltage_v")
+    output_current = _pick_number(snapshot, "load_current_a", "inv_output_current_a") or _calculate_current(
+        output_power,
+        output_voltage,
+    )
+    output_frequency = _pick_number(snapshot, "inv_output_freq_hz", "grid_freq_hz")
+    inverter_power = _pick_inverter_output_power(snapshot)
+    dc_power = -inverter_power if inverter_power is not None else None
+    dc_current = _calculate_current(dc_power, battery_voltage)
+    connected = 1 if any(
+        value is not None
+        for value in (grid_power, grid_voltage, grid_current, output_power, output_voltage, output_current)
+    ) else 0
+    state = _derive_inverter_state(snapshot=snapshot, connected=connected == 1, inverter_power=inverter_power)
+    return {
+        "/Connected": connected,
+        "/CustomName": settings.inverter_custom_name,
+        "/DeviceInstance": settings.multi_device_instance,
+        "/DeviceOffReason": 0,
+        "/Mode": 3 if connected else 4,
+        "/ProductId": settings.product_id,
+        "/ProductName": settings.multi_product_name,
+        "/Serial": f"{serial}-multi",
+        "/State": state,
+        "/Dc/0/Voltage": battery_voltage,
+        "/Dc/0/Current": dc_current,
+        "/Dc/0/Power": dc_power,
+        "/Ac/NumberOfAcInputs": 1,
+        "/Ac/ActiveIn/ActiveInput": active_input,
+        "/Ac/ActiveIn/Connected": 1 if grid_connected else 0,
+        "/Ac/ActiveIn/L1/V": grid_voltage,
+        "/Ac/ActiveIn/L1/I": grid_current,
+        "/Ac/ActiveIn/L1/P": grid_power,
+        "/Ac/In/1/Connected": 1 if grid_connected else 0,
+        "/Ac/In/1/Type": AC_INPUT_TYPE_GRID,
+        "/Ac/In/1/L1/V": grid_voltage,
+        "/Ac/In/1/L1/I": grid_current,
+        "/Ac/In/1/L1/P": grid_power,
+        "/Ac/In/1/L1/F": grid_frequency,
+        "/Ac/Out/L1/V": output_voltage,
+        "/Ac/Out/L1/I": output_current,
+        "/Ac/Out/L1/P": output_power,
+        "/Ac/Out/L1/S": _calculate_power(output_voltage, output_current),
+        "/Ac/Out/L1/F": output_frequency,
     }
 
 

@@ -42,6 +42,7 @@ class ConfigTests(unittest.TestCase):
                 self.assertEqual(config.mqtt_payload_format, "new")
                 self.assertIs(config.mqtt_tls_verify_server, False)
                 self.assertIs(config.enable_inverter_service, True)
+                self.assertIs(config.enable_multi_compat, True)
                 self.assertEqual(config.inverter_device_instance, 32)
 
     def test_load_config_can_enable_mqtt_tls_server_verification(self) -> None:

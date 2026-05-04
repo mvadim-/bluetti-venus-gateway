@@ -35,6 +35,7 @@ class GatewayConfig:
     enable_pv: bool
     enable_pack_diagnostics: bool
     enable_inverter_service: bool
+    enable_multi_compat: bool
     enable_vebus_compat: bool
     battery_device_instance: int
     grid_device_instance: int
@@ -113,6 +114,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH, env: Mapping[str, str] | None 
         enable_pv=_bool(merged.get("BLUETTI_ENABLE_PV", "0"), "BLUETTI_ENABLE_PV"),
         enable_pack_diagnostics=_bool(merged.get("BLUETTI_ENABLE_PACK_DIAGNOSTICS", "0"), "BLUETTI_ENABLE_PACK_DIAGNOSTICS"),
         enable_inverter_service=_bool(merged.get("BLUETTI_ENABLE_INVERTER_SERVICE", "1"), "BLUETTI_ENABLE_INVERTER_SERVICE"),
+        enable_multi_compat=_bool(merged.get("BLUETTI_ENABLE_MULTI_COMPAT", "1"), "BLUETTI_ENABLE_MULTI_COMPAT"),
         enable_vebus_compat=_bool(merged.get("BLUETTI_ENABLE_VEBUS_COMPAT", "0"), "BLUETTI_ENABLE_VEBUS_COMPAT"),
         battery_device_instance=_non_negative_int(merged.get("BLUETTI_BATTERY_DEVICE_INSTANCE", "41"), "BLUETTI_BATTERY_DEVICE_INSTANCE"),
         grid_device_instance=_non_negative_int(merged.get("BLUETTI_GRID_DEVICE_INSTANCE", "30"), "BLUETTI_GRID_DEVICE_INSTANCE"),
