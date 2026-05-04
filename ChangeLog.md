@@ -1,5 +1,17 @@
 # ChangeLog
 
+## [2026-05-04 15:54] Complete Raspberry Pi deployment documentation
+- Added canonical deploy guide at `docs/deploy/bluetti-venus-gateway-rpi5.md`
+- Kept `docs/deploy/venus-gateway-rpi5.md` as a compatibility pointer
+- Expanded README with expected D-Bus services and operations commands
+- Documented fresh Venus OS setup, config fields, Git/offline update, repair, troubleshooting, and future PV/GUI notes
+- Copied the updated implementation plan into `docs/plans/20260430-venus-gateway-rpi5.md`
+- Verified locally with:
+  - `env PYTHONPATH=src python3 -m unittest discover -s tests`
+  - `python3 -m compileall -q src`
+  - `bash -n venus/install-venus.sh venus/update-venus.sh venus/repair-if-needed.sh venus/status.sh venus/restart.sh venus/logs.sh venus/uninstall-venus.sh venus/build-offline-bundle.sh venus/lib/offline-bundle.sh venus/services/bluetti-collector/run venus/services/bluetti-dbus-bridge/run venus/services/bluetti-repair-on-boot/run`
+  - `git diff --check`
+
 ## [2026-05-04 15:44] Complete offline bundle install path
 - Added offline bundle verification/apply helper for manifest and checksum validation
 - Updated `build-offline-bundle.sh` to include:

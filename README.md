@@ -38,7 +38,13 @@ vi /data/bluetti-gateway/bluetti-gateway.env
 ./venus/status.sh
 ```
 
-See [docs/deploy/venus-gateway-rpi5.md](docs/deploy/venus-gateway-rpi5.md).
+Expected services after BLUETTI credentials are configured:
+
+- `com.victronenergy.battery.ep760_41`
+- `com.victronenergy.grid.ep760_30`
+- `com.victronenergy.acload.ep760_31`
+
+See [docs/deploy/bluetti-venus-gateway-rpi5.md](docs/deploy/bluetti-venus-gateway-rpi5.md).
 
 ## Offline Bundle
 
@@ -57,3 +63,12 @@ cd /data/bluetti-venus-gateway
 
 The bundle contains source, Venus scripts, service definitions, a manifest, package prerequisites,
 and checksums. It does not include local config, BLUETTI credentials, certs, cache, or logs.
+
+## Operations
+
+```bash
+./venus/status.sh
+./venus/logs.sh 120
+./venus/restart.sh
+./venus/repair-if-needed.sh --force
+```
