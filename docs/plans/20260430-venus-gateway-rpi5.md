@@ -1244,16 +1244,28 @@ Raspberry Pi validation:
 - Modify in gateway repo: `docs/plans/20260430-venus-gateway-rpi5.md`
 - Modify in gateway repo: gateway changelog.
 
-- [ ] deploy gateway to Raspberry Pi 5
-- [ ] run `venus/status.sh`
-- [ ] verify collector logs and telemetry age
-- [ ] verify D-Bus battery/grid/acload services
+- [x] deploy gateway to Raspberry Pi 5
+- [x] run `venus/status.sh`
+- [x] verify collector logs and telemetry age
+- [x] verify D-Bus battery/grid/acload services
 - [ ] verify local Venus GUI Battery, AC Input, AC Loads
 - [ ] verify VRM Portal Battery, AC Input, AC Loads
-- [ ] verify stale behavior by stopping collector temporarily
-- [ ] reboot Raspberry Pi and verify services recover
-- [ ] test `repair-if-needed.sh --force`
-- [ ] record final versions and operational notes
+- [x] verify stale behavior by stopping collector temporarily
+- [x] reboot Raspberry Pi and verify services recover
+- [x] test `repair-if-needed.sh --force`
+- [x] record final versions and operational notes
+
+Hardware validation record:
+
+- `docs/validation/20260504-raspberry-pi-hardware.md`
+
+Pending manual confirmations:
+
+- Local GUI visual confirmation is pending because GUIv2 browser automation could confirm the prior
+  high-voltage notification became inactive, but could not reliably inspect the Overview/device list.
+- VRM Portal validation is pending user confirmation or VRM access.
+- Confirm or configure persistent time synchronization. The tested Venus OS image had an incorrect
+  system clock and no obvious NTP/time-sync service during validation.
 
 ## Post-Completion
 

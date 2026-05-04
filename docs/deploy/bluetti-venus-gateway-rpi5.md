@@ -12,6 +12,10 @@ The v1 runtime publishes an EP760 as native Venus D-Bus Battery, AC Input, and A
 5. Add the Venus OS device to VRM and record the VRM Portal ID.
 6. Confirm system time/NTP is correct.
 
+Correct system time is required for BLUETTI TLS/auth behavior and for telemetry stale-age decisions.
+On the validated Venus OS v3.72 Raspberry Pi image, no `timedatectl`, `ntpd`, `chronyc`, `sntp`, or
+dedicated time-sync service was found, so check `date -u` before relying on the gateway.
+
 Confirmed production target:
 
 ```text
@@ -130,6 +134,15 @@ com.victronenergy.grid.ep760_30
 com.victronenergy.acload.ep760_31
 ```
 
+Expected battery alarm state for the current EP760 default configuration:
+
+```text
+/Alarms/HighVoltage: 0
+/Alarms/LowVoltage: 0
+```
+
+Voltage alarms are disabled by default until verified EP760-specific thresholds are configured.
+
 ## Update From Git
 
 ```bash
@@ -206,6 +219,9 @@ Repair preserves:
 
 Boot-time repair is installed as `bluetti-repair-on-boot` and restores service links after Venus OS
 updates when needed.
+
+The installer also adds a persistent `/data/rc.local` repair hook. This is required on the validated
+Raspberry Pi image because `/service` is a tmpfs and service symlinks disappear across reboot.
 
 ## Troubleshooting
 

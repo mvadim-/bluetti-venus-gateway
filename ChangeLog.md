@@ -227,3 +227,18 @@
   - `env PYTHONPATH=src python3 -m unittest discover -s tests`
   - `python3 -m compileall -q src`
   - `bash -n venus/install-venus.sh venus/update-venus.sh venus/repair-if-needed.sh venus/status.sh venus/restart.sh venus/logs.sh venus/uninstall-venus.sh venus/build-offline-bundle.sh venus/services/bluetti-collector/run venus/services/bluetti-dbus-bridge/run venus/services/bluetti-repair-on-boot/run`
+## [2026-05-04 16:40] Record Raspberry Pi hardware validation
+- Continued Task 13 from `docs/plans/20260430-venus-gateway-rpi5.md`
+- Added `docs/validation/20260504-raspberry-pi-hardware.md`
+- Updated deploy notes with:
+  - Venus OS time/NTP risk
+  - expected EP760 voltage alarm state
+  - persistent `/data/rc.local` repair hook behavior
+- Marked completed Raspberry Pi validation items in the copied implementation plan
+- Left local GUI Overview and VRM Portal checks open for user confirmation
+- Verified live Raspberry Pi status on `venus.local`:
+  - gateway commit `5c23951`
+  - collector, D-Bus bridge, repair service, and `vrmlogger` running
+  - latest telemetry age `1s`
+  - Battery, AC Input, and AC Load D-Bus services present
+  - Battery `/Connected = 1`, `/Alarms/HighVoltage = 0`, `/Alarms/LowVoltage = 0`
