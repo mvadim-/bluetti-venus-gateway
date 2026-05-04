@@ -237,3 +237,36 @@ systemcalc and VRM logger need for:
 - Multi
 - optional VE.Bus compatibility
 
+## Live Post-Deploy Check
+
+After deploying commit `19582ba`, the Raspberry Pi reported:
+
+```text
+bluetti-collector: running
+bluetti-dbus-bridge: running
+latest telemetry age: 0s
+D-Bus battery service: present
+D-Bus grid service: present
+D-Bus acload service: present
+D-Bus inverter service: present
+D-Bus multi service: present
+```
+
+Spot checks:
+
+```text
+com.victronenergy.multi.ep760_32 /Soc = 100
+com.victronenergy.multi.ep760_32 /Ac/In/1/L1/P = 396W
+com.victronenergy.multi.ep760_32 /Ac/In/1/L1/I = 3.1A
+com.victronenergy.multi.ep760_32 /Ac/In/1/L1/F = 49.9Hz
+com.victronenergy.inverter.ep760_32 /Ac/In/1/L1/P = 350W
+com.victronenergy.inverter.ep760_32 /Soc = 100
+com.victronenergy.system /Ac/ActiveIn/Source = 1
+com.victronenergy.system /Ac/Consumption/L1/Power = 353W
+```
+
+`/Dc/0/Temperature` was present but `null` on the live Multi service because the current BLUETTI
+snapshot did not include `pack_avg_temp_c` or `pack_temp_c` at that moment.
+
+The Codex in-app browser showed Venus GUIv2 still rendering Grid, Inverter / Charger, AC Loads,
+Battery, and the Grid-to-Inverter-to-AC-Loads flow after deployment.
