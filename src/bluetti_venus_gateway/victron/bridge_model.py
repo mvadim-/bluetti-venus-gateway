@@ -45,6 +45,8 @@ class VenusBridgeSettings:
     installed_capacity_ah: float | None = None
     voltage_low_alarm_v: float | None = None
     voltage_high_alarm_v: float | None = None
+    battery_low_temp_alarm_c: float | None = None
+    battery_high_temp_alarm_c: float | None = None
     soc_low_alarm_pct: float = 10.0
     enable_inverter_service: bool = True
     enable_multi_compat: bool = True
@@ -71,6 +73,8 @@ def settings_from_gateway_config(config: Any) -> VenusBridgeSettings:
         gui_gauge_auto_max=config.gui_gauge_auto_max,
         gui_grid_max_current_a=config.gui_grid_max_current_a,
         gui_load_max_current_a=config.gui_load_max_current_a,
+        battery_low_temp_alarm_c=config.battery_low_temp_alarm_c,
+        battery_high_temp_alarm_c=config.battery_high_temp_alarm_c,
     )
 
 
@@ -196,6 +200,8 @@ def _build_battery_values(snapshot: dict[str, Any], *, settings: VenusBridgeSett
         "/Alarms/LowVoltage": _derive_alarm(voltage, settings.voltage_low_alarm_v, "low"),
         "/Alarms/HighVoltage": _derive_alarm(voltage, settings.voltage_high_alarm_v, "high"),
         "/Alarms/LowSoc": _derive_alarm(soc, settings.soc_low_alarm_pct, "low"),
+        "/Alarms/LowTemperature": _derive_alarm(temperature, settings.battery_low_temp_alarm_c, "low"),
+        "/Alarms/HighTemperature": _derive_alarm(temperature, settings.battery_high_temp_alarm_c, "high"),
     }
 
 

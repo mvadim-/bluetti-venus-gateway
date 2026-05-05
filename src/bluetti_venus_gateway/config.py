@@ -55,6 +55,8 @@ class GatewayConfig:
     gui_gauge_auto_max: bool
     gui_grid_max_current_a: float
     gui_load_max_current_a: float
+    battery_low_temp_alarm_c: float | None
+    battery_high_temp_alarm_c: float | None
     data_dir: Path = DEFAULT_DATA_DIR
     run_dir: Path = DEFAULT_RUN_DIR
 
@@ -117,7 +119,7 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH, env: Mapping[str, str] | None 
         poll_interval_seconds=_positive_int(merged.get("BLUETTI_POLL_INTERVAL_SECONDS", "5"), "BLUETTI_POLL_INTERVAL_SECONDS"),
         stale_after_seconds=_positive_int(merged.get("BLUETTI_STALE_AFTER_SECONDS", "20"), "BLUETTI_STALE_AFTER_SECONDS"),
         enable_pv=_bool(merged.get("BLUETTI_ENABLE_PV", "0"), "BLUETTI_ENABLE_PV"),
-        enable_pack_diagnostics=_bool(merged.get("BLUETTI_ENABLE_PACK_DIAGNOSTICS", "0"), "BLUETTI_ENABLE_PACK_DIAGNOSTICS"),
+        enable_pack_diagnostics=_bool(merged.get("BLUETTI_ENABLE_PACK_DIAGNOSTICS", "1"), "BLUETTI_ENABLE_PACK_DIAGNOSTICS"),
         enable_inverter_service=_bool(merged.get("BLUETTI_ENABLE_INVERTER_SERVICE", "1"), "BLUETTI_ENABLE_INVERTER_SERVICE"),
         enable_multi_compat=_bool(merged.get("BLUETTI_ENABLE_MULTI_COMPAT", "1"), "BLUETTI_ENABLE_MULTI_COMPAT"),
         enable_vebus_compat=_bool(merged.get("BLUETTI_ENABLE_VEBUS_COMPAT", "0"), "BLUETTI_ENABLE_VEBUS_COMPAT"),
@@ -145,6 +147,14 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH, env: Mapping[str, str] | None 
         gui_load_max_current_a=_positive_float(
             merged.get("BLUETTI_GUI_LOAD_MAX_CURRENT_A", str(DEFAULT_GUI_LOAD_MAX_CURRENT_A)),
             "BLUETTI_GUI_LOAD_MAX_CURRENT_A",
+        ),
+        battery_low_temp_alarm_c=_optional_float(
+            merged.get("BLUETTI_BATTERY_LOW_TEMP_ALARM_C", ""),
+            "BLUETTI_BATTERY_LOW_TEMP_ALARM_C",
+        ),
+        battery_high_temp_alarm_c=_optional_float(
+            merged.get("BLUETTI_BATTERY_HIGH_TEMP_ALARM_C", ""),
+            "BLUETTI_BATTERY_HIGH_TEMP_ALARM_C",
         ),
         data_dir=Path(merged.get("BLUETTI_DATA_DIR", str(DEFAULT_DATA_DIR))),
         run_dir=Path(merged.get("BLUETTI_RUN_DIR", str(DEFAULT_RUN_DIR))),
@@ -190,6 +200,15 @@ def _positive_float(raw_value: str, key: str) -> float:
     if value <= 0:
         raise ConfigError(f"{key} must be greater than zero")
     return value
+
+
+def _optional_float(raw_value: str, key: str) -> float | None:
+    if raw_value.strip() == "":
+        return None
+    try:
+        return float(raw_value)
+    except ValueError as exc:
+        raise ConfigError(f"{key} must be a number") from exc
 
 
 def _non_negative_int(raw_value: str, key: str) -> int:

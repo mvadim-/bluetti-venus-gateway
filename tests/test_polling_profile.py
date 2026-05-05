@@ -20,12 +20,24 @@ class PollingProfileTests(unittest.TestCase):
             ],
         )
 
-    def test_vrm_minimal_profile_keeps_future_streams_disabled_by_default(self) -> None:
+    def test_vrm_minimal_profile_keeps_optional_streams_disabled_by_default(self) -> None:
         addrs = {spec.addr for spec in build_poll_profile("vrm-minimal")}
 
         self.assertNotIn(1200, addrs)
         self.assertNotIn(6000, addrs)
         self.assertNotIn(6100, addrs)
+
+    def test_vrm_minimal_profile_can_enable_pack_diagnostics_without_pv(self) -> None:
+        addrs = {
+            spec.addr
+            for spec in build_poll_profile(
+                "vrm-minimal",
+                enable_pack_diagnostics=True,
+            )
+        }
+
+        self.assertNotIn(1200, addrs)
+        self.assertTrue({6000, 6100}.issubset(addrs))
 
     def test_vrm_minimal_profile_enables_optional_future_streams(self) -> None:
         addrs = {

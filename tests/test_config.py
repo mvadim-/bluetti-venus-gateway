@@ -47,6 +47,49 @@ class ConfigTests(unittest.TestCase):
                 self.assertIs(config.gui_gauge_auto_max, False)
                 self.assertEqual(config.gui_grid_max_current_a, 50.0)
                 self.assertEqual(config.gui_load_max_current_a, 33.0)
+                self.assertIsNone(config.battery_low_temp_alarm_c)
+                self.assertIsNone(config.battery_high_temp_alarm_c)
+
+    def test_load_config_enables_pack_diagnostics_by_default(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "bluetti-gateway.env"
+            config_path.write_text(
+                "\n".join(
+                    [
+                        "BLUETTI_EMAIL=user@example.com",
+                        "BLUETTI_PASSWORD=secret",
+                        "BLUETTI_DEVICE_SN=EP760SN",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            self.assertIs(load_config(config_path).enable_pack_diagnostics, True)
+
+    def test_load_config_parses_battery_temperature_alarm_thresholds(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "bluetti-gateway.env"
+            config_path.write_text(
+                "\n".join(
+                    [
+                        "BLUETTI_EMAIL=user@example.com",
+                        "BLUETTI_PASSWORD=secret",
+                        "BLUETTI_DEVICE_SN=EP760SN",
+                        "BLUETTI_BATTERY_LOW_TEMP_ALARM_C=0",
+                        "BLUETTI_BATTERY_HIGH_TEMP_ALARM_C=45.5",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            config = load_config(config_path)
+
+            self.assertEqual(config.battery_low_temp_alarm_c, 0.0)
+            self.assertEqual(config.battery_high_temp_alarm_c, 45.5)
 
     def test_load_config_parses_gui_gauge_limits(self) -> None:
         import tempfile

@@ -213,6 +213,31 @@ class BridgeModelTests(unittest.TestCase):
 
         self.assertEqual(payload["venus_battery"]["values"]["/Alarms/HighVoltage"], 0)
         self.assertEqual(payload["venus_battery"]["values"]["/Alarms/LowVoltage"], 0)
+        self.assertEqual(payload["venus_battery"]["values"]["/Alarms/HighTemperature"], 0)
+        self.assertEqual(payload["venus_battery"]["values"]["/Alarms/LowTemperature"], 0)
+
+    def test_build_venus_bridge_payload_raises_configured_temperature_alarms(self) -> None:
+        high_payload = build_venus_bridge_payload(
+            {
+                "device_sn": "EP760SN",
+                "freshness": {"state": "fresh", "age_seconds": 2},
+                "snapshot": {"soc": 76, "pack_avg_temp_c": 46.0},
+            },
+            settings=VenusBridgeSettings(battery_low_temp_alarm_c=0.0, battery_high_temp_alarm_c=45.0),
+        )
+        low_payload = build_venus_bridge_payload(
+            {
+                "device_sn": "EP760SN",
+                "freshness": {"state": "fresh", "age_seconds": 2},
+                "snapshot": {"soc": 76, "pack_temp_c": -1.0},
+            },
+            settings=VenusBridgeSettings(battery_low_temp_alarm_c=0.0, battery_high_temp_alarm_c=45.0),
+        )
+
+        self.assertEqual(high_payload["venus_battery"]["values"]["/Alarms/HighTemperature"], 2)
+        self.assertEqual(high_payload["venus_battery"]["values"]["/Alarms/LowTemperature"], 0)
+        self.assertEqual(low_payload["venus_battery"]["values"]["/Alarms/HighTemperature"], 0)
+        self.assertEqual(low_payload["venus_battery"]["values"]["/Alarms/LowTemperature"], 2)
 
     def test_iter_venus_service_payloads_skips_missing_optional_vebus(self) -> None:
         payload = build_venus_bridge_payload(
@@ -271,6 +296,8 @@ class BridgeModelTests(unittest.TestCase):
                 "/Alarms/LowVoltage",
                 "/Alarms/HighVoltage",
                 "/Alarms/LowSoc",
+                "/Alarms/LowTemperature",
+                "/Alarms/HighTemperature",
             },
             "venus_grid": {
                 "/Ac/L1/Power",

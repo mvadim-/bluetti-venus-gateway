@@ -137,6 +137,12 @@ def decode_bluetti_payload(payload: bytes, expected_addr: int | None = None) -> 
     elif requested_addr == 1500:
         result["messageType"] = "invInvInfo"
         result["invInvInfo"] = parse_inv_inv_info_data(data)
+    elif requested_addr == 6000:
+        result["messageType"] = "packMainInfo"
+        result["packMainInfo"] = parse_pack_main_info_data(data)
+    elif requested_addr == 6100:
+        result["messageType"] = "packItemInfo"
+        result["packItemInfo"] = parse_pack_item_info_data(data)
     return result
 
 
@@ -267,6 +273,31 @@ def parse_inv_inv_info_data(data: bytes) -> dict[str, Any]:
     return result
 
 
+def parse_pack_main_info_data(data: bytes) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "totalSOC": _u16be(data, 0) if len(data) >= 2 else None,
+        "totalSOH": _u16be(data, 2) if len(data) >= 4 else None,
+        "averageTemp": _temperature_c(data, 4) if len(data) >= 6 else None,
+        "totalVoltage": _u16be(data, 6) / 10.0 if len(data) >= 8 else None,
+        "totalCurrent": _s16be(data, 8) / 10.0 if len(data) >= 10 else None,
+        "packCnts": _u16be(data, 10) if len(data) >= 12 else None,
+    }
+    return result
+
+
+def parse_pack_item_info_data(data: bytes) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "packID": _u16be(data, 0) if len(data) >= 2 else None,
+        "packSN": _ascii_swapped(data[2:18]).strip() if len(data) >= 18 else "",
+        "packSoc": _u16be(data, 18) if len(data) >= 20 else None,
+        "packSoh": _u16be(data, 20) if len(data) >= 22 else None,
+        "voltage": _u16be(data, 22) / 10.0 if len(data) >= 24 else None,
+        "current": _s16be(data, 24) / 10.0 if len(data) >= 26 else None,
+        "averageTemp": _temperature_c(data, 26) if len(data) >= 28 else None,
+    }
+    return result
+
+
 def _copy_mapped(source: dict[str, Any], mapping: dict[str, str], target: dict[str, Any]) -> None:
     for source_key, target_key in mapping.items():
         value = source.get(source_key)
@@ -282,13 +313,15 @@ def _first_phase(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _infer_requested_addr(wrapper_addr: Any, byte_count: int, expected_addr: int | None) -> int | None:
-    if isinstance(wrapper_addr, int) and wrapper_addr in {100, 1300, 1400, 1500}:
+    if isinstance(wrapper_addr, int) and wrapper_addr in {100, 1300, 1400, 1500, 6000, 6100}:
         return wrapper_addr
     by_size = {
         184: 100,
         38: 1300,
         72: 1400,
         30: 1500,
+        84: 6000,
+        208: 6100,
     }
     return by_size.get(byte_count, expected_addr)
 
@@ -309,6 +342,13 @@ def _u32_reg(data: bytes, offset: int) -> int:
 def _s32_reg(data: bytes, offset: int) -> int:
     swapped = data[offset + 2:offset + 4] + data[offset:offset + 2]
     return int.from_bytes(swapped, "big", signed=True)
+
+
+def _temperature_c(data: bytes, offset: int) -> float:
+    raw_value = _s16be(data, offset)
+    if abs(raw_value) >= 100:
+        return raw_value / 10.0
+    return float(raw_value)
 
 
 def _ascii_swapped(data: bytes) -> str:
