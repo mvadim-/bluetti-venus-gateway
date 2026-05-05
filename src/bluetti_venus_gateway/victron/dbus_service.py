@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 from typing import Any
 
+from bluetti_venus_gateway.victron.bridge_model import VenusBridgeSettings
 from bluetti_venus_gateway.victron.bridge_model import iter_venus_service_payloads
 
 
@@ -12,6 +13,11 @@ LOGGER = logging.getLogger(__name__)
 BUS_ITEM_INTERFACE = "com.victronenergy.BusItem"
 SETTINGS_SERVICE_NAME = "com.victronenergy.settings"
 SETTINGS_BATTERY_PATH = "/Settings/SystemSetup/BatteryService"
+SETTINGS_GUI_GAUGE_AUTO_MAX_PATH = "/Settings/Gui/Gauges/AutoMax"
+SETTINGS_GUI_GRID_CURRENT_MIN_PATH = "/Settings/Gui/Gauges/Ac/In/0/Current/Min"
+SETTINGS_GUI_GRID_CURRENT_MAX_PATH = "/Settings/Gui/Gauges/Ac/In/0/Current/Max"
+SETTINGS_GUI_LOAD_WITH_AC_IN_CURRENT_MAX_PATH = "/Settings/Gui/Gauges/Ac/AcIn1/Consumption/Current/Max"
+SETTINGS_GUI_LOAD_WITHOUT_AC_IN_CURRENT_MAX_PATH = "/Settings/Gui/Gauges/Ac/NoAcIn/Consumption/Current/Max"
 
 VELIB_PYTHON_PATHS = [
     Path("/opt/victronenergy/dbus-systemcalc-py/ext/velib_python"),
@@ -56,12 +62,38 @@ class VenusDbusPublisher:
         self._process_version = process_version
         self._connection_name = connection_name
         self._selected_battery_service: str | None = None
+        self._configured_gui_gauge_values: tuple[tuple[str, float | int], ...] | None = None
 
     def process_events(self) -> None:
         if self._main_context is None:
             return
         while self._main_context.pending():
             self._main_context.iteration(False)
+
+    def configure_gui_gauge_ranges(self, settings: VenusBridgeSettings) -> None:
+        desired_values = _gui_gauge_setting_values(settings)
+        if desired_values == self._configured_gui_gauge_values:
+            return
+        try:
+            for path, value in desired_values:
+                setting = self._settings_bus.get_object(SETTINGS_SERVICE_NAME, path)
+                iface = self._dbus.Interface(setting, BUS_ITEM_INTERFACE)
+                iface.SetValue(value)
+            self._configured_gui_gauge_values = desired_values
+            LOGGER.info(
+                "Configured Venus GUI gauge ranges: auto_max=%s grid=%.1fA load=%.1fA",
+                settings.gui_gauge_auto_max,
+                settings.gui_grid_max_current_a,
+                settings.gui_load_max_current_a,
+            )
+        except self._dbus.exceptions.DBusException as exc:
+            if exc.get_dbus_name() in {
+                "org.freedesktop.DBus.Error.NameHasNoOwner",
+                "org.freedesktop.DBus.Error.ServiceUnknown",
+            }:
+                LOGGER.info("Venus settings service unavailable; GUI gauge configuration deferred")
+                return
+            LOGGER.exception("Failed to configure Venus GUI gauge ranges")
 
     def publish(self, bridge_payload: dict[str, Any]) -> None:
         for service_name, values in iter_venus_service_payloads(bridge_payload):
@@ -116,3 +148,20 @@ class VenusDbusPublisher:
                 LOGGER.info("Venus settings service unavailable; battery selection deferred")
                 return
             LOGGER.exception("Failed to select Venus battery service %s", setting_value)
+
+
+def _gui_gauge_setting_values(settings: VenusBridgeSettings) -> tuple[tuple[str, float | int], ...]:
+    values: list[tuple[str, float | int]] = [
+        (SETTINGS_GUI_GAUGE_AUTO_MAX_PATH, 1 if settings.gui_gauge_auto_max else 0),
+    ]
+    if settings.gui_gauge_auto_max:
+        return tuple(values)
+    values.extend(
+        [
+            (SETTINGS_GUI_GRID_CURRENT_MIN_PATH, 0.0),
+            (SETTINGS_GUI_GRID_CURRENT_MAX_PATH, settings.gui_grid_max_current_a),
+            (SETTINGS_GUI_LOAD_WITH_AC_IN_CURRENT_MAX_PATH, settings.gui_load_max_current_a),
+            (SETTINGS_GUI_LOAD_WITHOUT_AC_IN_CURRENT_MAX_PATH, settings.gui_load_max_current_a),
+        ]
+    )
+    return tuple(values)

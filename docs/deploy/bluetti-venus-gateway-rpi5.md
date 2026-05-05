@@ -92,11 +92,20 @@ BLUETTI_ENABLE_PACK_DIAGNOSTICS=0
 BLUETTI_ENABLE_INVERTER_SERVICE=1
 BLUETTI_ENABLE_MULTI_COMPAT=1
 BLUETTI_ENABLE_VEBUS_COMPAT=0
+BLUETTI_GUI_GAUGE_AUTO_MAX=0
+BLUETTI_GUI_GRID_MAX_CURRENT_A=50
+BLUETTI_GUI_LOAD_MAX_CURRENT_A=33
 ```
 
 `BLUETTI_MQTT_TLS_VERIFY_SERVER=0` is intentional for the current BLUETTI/PowerOak MQTT broker. The
 broker presents a private PowerOak-issued server certificate without the issuer chain. TLS and client
 certificate authentication still remain enabled.
+
+`BLUETTI_GUI_GAUGE_AUTO_MAX=0` keeps Venus GUIv2 side gauges on EP760 fixed current ranges instead
+of letting Venus auto-scale them from recent live values. The defaults match EP760 AC interface
+ratings: Grid input `50A` and inverter/load output `33A` at `230V`. Set `BLUETTI_GUI_LOAD_MAX_CURRENT_A=20`
+for Germany-limited `4.6kW` installations, or adjust these values if the physical installation is
+limited below the inverter rating.
 
 Device instances and labels:
 

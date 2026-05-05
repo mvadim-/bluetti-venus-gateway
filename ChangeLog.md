@@ -1,5 +1,11 @@
 # ChangeLog
 
+## [2026-05-05 11:36] Fix EP760 Venus GUI gauge ranges
+- Fixed Venus GUIv2 Grid and Inverter / Charger side gauges using auto-learned `16.7A` limits instead of EP760 ratings
+- Added fixed GUI gauge settings for Grid input `50A` and inverter/load output `33A`, with `AutoMax` disabled by default
+- Added config/env documentation so German `20A` output-limited installations or site-specific lower limits can override the defaults
+- Added unit coverage for config parsing and the Venus settings paths used by GUIv2 gauge ranges
+
 ## [2026-05-04 16:34] Disable unverified EP760 voltage alarms
 - Fixed false Venus GUI high-voltage alarm found during Raspberry Pi GUI validation
 - EP760 live Battery voltage was around `105V`, while previous default voltage alarm thresholds were inherited from a 48V-class battery profile

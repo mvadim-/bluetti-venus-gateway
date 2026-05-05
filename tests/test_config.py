@@ -44,6 +44,34 @@ class ConfigTests(unittest.TestCase):
                 self.assertIs(config.enable_inverter_service, True)
                 self.assertIs(config.enable_multi_compat, True)
                 self.assertEqual(config.inverter_device_instance, 32)
+                self.assertIs(config.gui_gauge_auto_max, False)
+                self.assertEqual(config.gui_grid_max_current_a, 50.0)
+                self.assertEqual(config.gui_load_max_current_a, 33.0)
+
+    def test_load_config_parses_gui_gauge_limits(self) -> None:
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            config_path = Path(temp_dir) / "bluetti-gateway.env"
+            config_path.write_text(
+                "\n".join(
+                    [
+                        "BLUETTI_EMAIL=user@example.com",
+                        "BLUETTI_PASSWORD=secret",
+                        "BLUETTI_DEVICE_SN=EP760SN",
+                        "BLUETTI_GUI_GAUGE_AUTO_MAX=1",
+                        "BLUETTI_GUI_GRID_MAX_CURRENT_A=40.5",
+                        "BLUETTI_GUI_LOAD_MAX_CURRENT_A=20",
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            config = load_config(config_path)
+
+            self.assertIs(config.gui_gauge_auto_max, True)
+            self.assertEqual(config.gui_grid_max_current_a, 40.5)
+            self.assertEqual(config.gui_load_max_current_a, 20.0)
 
     def test_load_config_can_enable_mqtt_tls_server_verification(self) -> None:
         import tempfile

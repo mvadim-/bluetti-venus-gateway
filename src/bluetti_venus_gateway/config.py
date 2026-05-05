@@ -8,6 +8,8 @@ from typing import Mapping
 DEFAULT_CONFIG_PATH = Path("/data/bluetti-gateway/bluetti-gateway.env")
 DEFAULT_DATA_DIR = Path("/data/bluetti-gateway")
 DEFAULT_RUN_DIR = Path("/run/bluetti-gateway")
+DEFAULT_GUI_GRID_MAX_CURRENT_A = 50.0
+DEFAULT_GUI_LOAD_MAX_CURRENT_A = 33.0
 
 SECRET_KEYS = {
     "BLUETTI_PASSWORD",
@@ -50,6 +52,9 @@ class GatewayConfig:
     mqtt_payload_format: str
     mqtt_ciphers: str
     mqtt_tls_verify_server: bool
+    gui_gauge_auto_max: bool
+    gui_grid_max_current_a: float
+    gui_load_max_current_a: float
     data_dir: Path = DEFAULT_DATA_DIR
     run_dir: Path = DEFAULT_RUN_DIR
 
@@ -132,6 +137,15 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH, env: Mapping[str, str] | None 
             merged.get("BLUETTI_MQTT_TLS_VERIFY_SERVER", "0"),
             "BLUETTI_MQTT_TLS_VERIFY_SERVER",
         ),
+        gui_gauge_auto_max=_bool(merged.get("BLUETTI_GUI_GAUGE_AUTO_MAX", "0"), "BLUETTI_GUI_GAUGE_AUTO_MAX"),
+        gui_grid_max_current_a=_positive_float(
+            merged.get("BLUETTI_GUI_GRID_MAX_CURRENT_A", str(DEFAULT_GUI_GRID_MAX_CURRENT_A)),
+            "BLUETTI_GUI_GRID_MAX_CURRENT_A",
+        ),
+        gui_load_max_current_a=_positive_float(
+            merged.get("BLUETTI_GUI_LOAD_MAX_CURRENT_A", str(DEFAULT_GUI_LOAD_MAX_CURRENT_A)),
+            "BLUETTI_GUI_LOAD_MAX_CURRENT_A",
+        ),
         data_dir=Path(merged.get("BLUETTI_DATA_DIR", str(DEFAULT_DATA_DIR))),
         run_dir=Path(merged.get("BLUETTI_RUN_DIR", str(DEFAULT_RUN_DIR))),
     )
@@ -163,6 +177,16 @@ def _reject_template_values(values: Mapping[str, str]) -> None:
 
 def _positive_int(raw_value: str, key: str) -> int:
     value = _non_negative_int(raw_value, key)
+    if value <= 0:
+        raise ConfigError(f"{key} must be greater than zero")
+    return value
+
+
+def _positive_float(raw_value: str, key: str) -> float:
+    try:
+        value = float(raw_value)
+    except ValueError as exc:
+        raise ConfigError(f"{key} must be a number") from exc
     if value <= 0:
         raise ConfigError(f"{key} must be greater than zero")
     return value

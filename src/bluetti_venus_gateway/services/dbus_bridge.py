@@ -40,6 +40,7 @@ def run(config_path: Path = DEFAULT_CONFIG_PATH) -> None:
                 read_snapshot(config.snapshot_path),
                 stale_after_seconds=config.stale_after_seconds,
             )
+            publisher.configure_gui_gauge_ranges(settings)
             publisher.publish(build_venus_bridge_payload(envelope, settings=settings))
         except SnapshotStoreError as exc:
             now = time.monotonic()

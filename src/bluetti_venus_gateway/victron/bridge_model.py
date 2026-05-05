@@ -46,6 +46,9 @@ class VenusBridgeSettings:
     enable_inverter_service: bool = True
     enable_multi_compat: bool = True
     enable_vebus_compat: bool = False
+    gui_gauge_auto_max: bool = False
+    gui_grid_max_current_a: float = 50.0
+    gui_load_max_current_a: float = 33.0
 
 
 def settings_from_gateway_config(config: Any) -> VenusBridgeSettings:
@@ -62,6 +65,9 @@ def settings_from_gateway_config(config: Any) -> VenusBridgeSettings:
         enable_inverter_service=config.enable_inverter_service,
         enable_multi_compat=config.enable_multi_compat,
         enable_vebus_compat=config.enable_vebus_compat,
+        gui_gauge_auto_max=config.gui_gauge_auto_max,
+        gui_grid_max_current_a=config.gui_grid_max_current_a,
+        gui_load_max_current_a=config.gui_load_max_current_a,
     )
 
 
