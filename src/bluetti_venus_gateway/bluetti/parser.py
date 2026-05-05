@@ -276,11 +276,11 @@ def parse_inv_inv_info_data(data: bytes) -> dict[str, Any]:
 def parse_pack_main_info_data(data: bytes) -> dict[str, Any]:
     result: dict[str, Any] = {
         "totalSOC": _u16be(data, 0) if len(data) >= 2 else None,
-        "totalSOH": _u16be(data, 2) if len(data) >= 4 else None,
+        "packCnts": _u16be(data, 2) if len(data) >= 4 else None,
         "averageTemp": _temperature_c(data, 4) if len(data) >= 6 else None,
         "totalVoltage": _u16be(data, 6) / 10.0 if len(data) >= 8 else None,
         "totalCurrent": _s16be(data, 8) / 10.0 if len(data) >= 10 else None,
-        "packCnts": _u16be(data, 10) if len(data) >= 12 else None,
+        "totalSOH": _u16be(data, 10) if len(data) >= 12 else None,
     }
     return result
 

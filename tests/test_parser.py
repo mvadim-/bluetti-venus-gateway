@@ -80,11 +80,11 @@ class ParserTests(unittest.TestCase):
     def test_parse_pack_main_info_data_decodes_aggregate_battery_diagnostics(self) -> None:
         data = bytearray(84)
         data[0:2] = (82).to_bytes(2, "big")
-        data[2:4] = (99).to_bytes(2, "big")
+        data[2:4] = (2).to_bytes(2, "big")
         data[4:6] = (245).to_bytes(2, "big", signed=True)
         data[6:8] = (1053).to_bytes(2, "big")
         data[8:10] = (-37).to_bytes(2, "big", signed=True)
-        data[10:12] = (2).to_bytes(2, "big")
+        data[10:12] = (99).to_bytes(2, "big")
 
         parsed = parse_pack_main_info_data(bytes(data))
 
