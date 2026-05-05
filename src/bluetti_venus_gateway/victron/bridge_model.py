@@ -177,7 +177,7 @@ def _build_battery_values(snapshot: dict[str, Any], *, settings: VenusBridgeSett
     voltage = _pick_number(snapshot, "battery_voltage_v", "pack_total_voltage_v", "pack_voltage_v")
     current = _pick_number(snapshot, "battery_current_a", "pack_total_current_a", "pack_current_a")
     power = _pick_number(snapshot, "dc_power_w") or _calculate_power(voltage, current)
-    temperature = _pick_number(snapshot, "pack_avg_temp_c", "pack_temp_c")
+    temperature = _pick_number(snapshot, "pack_temp_c", "pack_avg_temp_c")
     connected = any(value is not None for value in (soc, voltage, current, power))
     return {
         "/Connected": 1 if connected else 0,

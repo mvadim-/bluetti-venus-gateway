@@ -42,8 +42,8 @@ Gateway snapshots expose:
 | `INV_GRID_INFO` | `1300` | Live grid voltage/current/frequency/power and grid energy counters. |
 | `INV_LOAD_INFO` | `1400` | AC/DC load power and first-phase load voltage/current. |
 | `INV_INVERTER_INFO` | `1500` | Inverter output power/voltage/current/frequency. |
-| `PACK_MAIN_INFO` | `6000` | Battery pack aggregate SOC/SOH/temp/voltage/current/count and pack-level warnings/faults. |
-| `PACK_ITEM_INFO` | `6100` | Individual pack ID/SN/SOC/SOH/voltage/current/temp and pack item warnings/faults. |
+| `PACK_MAIN_INFO` | `6000` | Battery pack aggregate SOC/SOH/voltage/current/count and pack-level warnings/faults. |
+| `PACK_ITEM_INFO` | `6100` | Battery pack NTC temperature and future pack item warnings/faults. |
 
 ## Transport And Metadata
 
@@ -166,7 +166,6 @@ Frontend flow-board fallback logic:
 | --- | --- | --- | --- | --- |
 | `pack_total_soc` | % | `PACK_MAIN_INFO.totalSOC` | Aggregate pack SOC. | Primary Battery tile value. |
 | `pack_total_soh` | % | `PACK_MAIN_INFO.totalSOH` | Aggregate pack state of health. | Battery health tile/detail. |
-| `pack_avg_temp_c` | Celsius | `PACK_MAIN_INFO.averageTemp` | Average pack temperature. | Battery thermal detail. |
 | `pack_total_voltage_v` | V | `PACK_MAIN_INFO.totalVoltage` | Aggregate pack voltage. | Battery voltage fallback/detail. |
 | `pack_total_current_a` | A | `PACK_MAIN_INFO.totalCurrent` | Aggregate pack current. | Battery current fallback/detail. |
 | `pack_count` | count | `PACK_MAIN_INFO.packCnts` | Number of battery packs. | Battery inventory/status. |
@@ -176,18 +175,12 @@ Frontend flow-board fallback logic:
 
 ## Battery Pack Item
 
-These values represent the current decoded pack item payload. If multiple pack item polls are
-added later, model the UI as a list/table keyed by `pack_id` or `pack_sn`.
+Only the live EP760 NTC temperature pair is normalized from the pack item payload for now. Other
+pack-item offsets are left out until they are validated against live BLUETTI app values.
 
 | Normalized key | Type/unit | Source field | Description | Suggested UI use |
 | --- | --- | --- | --- | --- |
-| `pack_id` | number/string | `PACK_ITEM_INFO.packID` | Pack identifier. | Pack table key. |
-| `pack_sn` | string | `PACK_ITEM_INFO.packSN` | Pack serial number. | Pack inventory/detail. |
-| `pack_soc` | % | `PACK_ITEM_INFO.packSoc` | Individual pack SOC. | Pack table/detail. |
-| `pack_soh` | % | `PACK_ITEM_INFO.packSoh` | Individual pack state of health. | Pack health detail. |
-| `pack_voltage_v` | V | `PACK_ITEM_INFO.voltage` | Individual pack voltage. | Pack electrical detail. |
-| `pack_current_a` | A | `PACK_ITEM_INFO.current` | Individual pack current. | Pack electrical detail. |
-| `pack_temp_c` | Celsius | `PACK_ITEM_INFO.averageTemp` | Individual pack average temperature. | Not normalized until the live EP760 offset is validated. |
+| `pack_temp_c` | Celsius | `PACK_ITEM_INFO` NTC pair | Average of the live EP760 pack-item NTC pair after the BLUETTI `+40` offset is removed. | Battery thermal detail and Victron `/Dc/0/Temperature`. |
 | `pack_protection` | array/string | `PACK_ITEM_INFO.packProtectNames` | Pack item protection statuses. | Pack warning/protection detail. |
 | `pack_warnings` | array/string | `PACK_ITEM_INFO.packHighVoltAlarmNames` | Pack item warning names. | Pack warning detail. |
 | `pack_faults` | array/string | `PACK_ITEM_INFO.packSysErrNames` | Pack item fault names. | Pack fault detail. |

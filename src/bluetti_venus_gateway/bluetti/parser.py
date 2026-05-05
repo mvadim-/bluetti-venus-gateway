@@ -50,19 +50,13 @@ INVERTER_SIGNAL_MAP = {
 PACK_MAIN_SIGNAL_MAP = {
     "totalSOC": "pack_total_soc",
     "totalSOH": "pack_total_soh",
-    "averageTemp": "pack_avg_temp_c",
     "totalVoltage": "pack_total_voltage_v",
     "totalCurrent": "pack_total_current_a",
     "packCnts": "pack_count",
 }
 
 PACK_ITEM_SIGNAL_MAP = {
-    "packID": "pack_id",
-    "packSN": "pack_sn",
-    "packSoc": "pack_soc",
-    "packSoh": "pack_soh",
-    "voltage": "pack_voltage_v",
-    "current": "pack_current_a",
+    "averageTemp": "pack_temp_c",
 }
 
 
@@ -276,7 +270,6 @@ def parse_pack_main_info_data(data: bytes) -> dict[str, Any]:
     result: dict[str, Any] = {
         "totalSOC": _u16be(data, 0) if len(data) >= 2 else None,
         "packCnts": _u16be(data, 2) if len(data) >= 4 else None,
-        "averageTemp": _temperature_c(data, 4) if len(data) >= 6 else None,
         "totalVoltage": _u16be(data, 6) / 10.0 if len(data) >= 8 else None,
         "totalCurrent": _s16be(data, 8) / 10.0 if len(data) >= 10 else None,
         "totalSOH": _u16be(data, 10) if len(data) >= 12 else None,
@@ -292,6 +285,7 @@ def parse_pack_item_info_data(data: bytes) -> dict[str, Any]:
         "packSoh": _u16be(data, 20) if len(data) >= 22 else None,
         "voltage": _u16be(data, 22) / 10.0 if len(data) >= 24 else None,
         "current": _s16be(data, 24) / 10.0 if len(data) >= 26 else None,
+        "averageTemp": _pack_item_average_temperature_c(data),
     }
     return result
 
@@ -342,11 +336,14 @@ def _s32_reg(data: bytes, offset: int) -> int:
     return int.from_bytes(swapped, "big", signed=True)
 
 
-def _temperature_c(data: bytes, offset: int) -> float:
-    raw_value = _s16be(data, offset)
-    if abs(raw_value) >= 100:
-        return raw_value / 10.0
-    return float(raw_value)
+def _pack_item_average_temperature_c(data: bytes) -> float | None:
+    if len(data) < 44:
+        return None
+    raw_values = (_u16be(data, 40), _u16be(data, 42))
+    temperatures = [value - 40.0 for value in raw_values if 40 <= value <= 100]
+    if not temperatures:
+        return None
+    return round(sum(temperatures) / len(temperatures), 1)
 
 
 def _ascii_swapped(data: bytes) -> str:

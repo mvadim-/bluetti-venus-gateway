@@ -18,8 +18,8 @@ published to Victron paths unless they are mapped intentionally.
 | `INV_GRID_INFO` | `1300` | `grid_voltage_v`, `grid_current_a`, `grid_power_w_phase_1`, `grid_apparent_va`, `grid_freq_hz`, `grid_charge_power_w`, `grid_charge_energy_total_kwh`, `grid_feedback_energy_total_kwh`, `grid_phase_count` | Confirmed |
 | `INV_LOAD_INFO` | `1400` | `ac_load_power_w`, `dc_load_power_w`, `load_voltage_v`, `load_current_a` | Confirmed |
 | `INV_INVERTER_INFO` | `1500` | `inv_output_power_w`, `inv_output_voltage_v`, `inv_output_current_a`, `inv_output_freq_hz` | Confirmed |
-| `PACK_MAIN_INFO` | `6000` | `pack_total_soc`, `pack_total_soh`, `pack_avg_temp_c`, `pack_total_voltage_v`, `pack_total_current_a`, `pack_count`, `battery_protection`, `battery_warnings`, `battery_faults` | Confirmed |
-| `PACK_ITEM_INFO` | `6100` | `pack_id`, `pack_sn`, `pack_soc`, `pack_soh`, `pack_voltage_v`, `pack_current_a`, `pack_protection`, `pack_warnings`, `pack_faults` | Confirmed, but pack-item temperature and low-level cell calibration are still incomplete |
+| `PACK_MAIN_INFO` | `6000` | `pack_total_soc`, `pack_total_soh`, `pack_total_voltage_v`, `pack_total_current_a`, `pack_count`, `battery_protection`, `battery_warnings`, `battery_faults` | Confirmed |
+| `PACK_ITEM_INFO` | `6100` | `pack_temp_c`, `pack_protection`, `pack_warnings`, `pack_faults` | Temperature confirmed from the live EP760 NTC pair; remaining pack-item identity/electrical fields are still incomplete |
 
 ## Requirement Mapping
 

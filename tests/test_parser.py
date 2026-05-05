@@ -30,10 +30,12 @@ class ParserTests(unittest.TestCase):
                 "packMainInfo": {
                     "totalSOC": 81,
                     "totalSOH": 99,
-                    "averageTemp": 24.0,
                     "totalVoltage": 105.1,
                     "totalCurrent": -4.2,
                     "packCnts": 2,
+                },
+                "packItemInfo": {
+                    "averageTemp": 24.5,
                 },
             }
         )
@@ -43,7 +45,7 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(snapshot["battery_voltage_v"], 52.5)
         self.assertEqual(snapshot["grid_voltage_v"], 231.0)
         self.assertEqual(snapshot["load_current_a"], 2.0)
-        self.assertEqual(snapshot["pack_avg_temp_c"], 24.0)
+        self.assertEqual(snapshot["pack_temp_c"], 24.5)
         self.assertEqual(snapshot["pack_total_current_a"], -4.2)
 
     def test_parse_inv_grid_info_data_projects_first_phase(self) -> None:
@@ -81,7 +83,6 @@ class ParserTests(unittest.TestCase):
         data = bytearray(84)
         data[0:2] = (82).to_bytes(2, "big")
         data[2:4] = (2).to_bytes(2, "big")
-        data[4:6] = (245).to_bytes(2, "big", signed=True)
         data[6:8] = (1053).to_bytes(2, "big")
         data[8:10] = (-37).to_bytes(2, "big", signed=True)
         data[10:12] = (99).to_bytes(2, "big")
@@ -90,23 +91,22 @@ class ParserTests(unittest.TestCase):
 
         self.assertEqual(parsed["totalSOC"], 82)
         self.assertEqual(parsed["totalSOH"], 99)
-        self.assertEqual(parsed["averageTemp"], 24.5)
         self.assertEqual(parsed["totalVoltage"], 105.3)
         self.assertEqual(parsed["totalCurrent"], -3.7)
         self.assertEqual(parsed["packCnts"], 2)
 
     def test_decode_bluetti_payload_routes_pack_diagnostics_by_wrapper_addr(self) -> None:
         data = bytearray(84)
-        data[4:6] = (245).to_bytes(2, "big", signed=True)
+        data[6:8] = (1053).to_bytes(2, "big")
         modbus = bytes([1, 3, len(data)]) + bytes(data) + bytes(2)
         payload = bytes.fromhex("01F80F17700000000000") + modbus
 
         decoded = decode_bluetti_payload(payload)
 
         self.assertEqual(decoded["messageType"], "packMainInfo")
-        self.assertEqual(decoded["packMainInfo"]["averageTemp"], 24.5)
+        self.assertEqual(decoded["packMainInfo"]["totalVoltage"], 105.3)
 
-    def test_parse_pack_item_info_data_decodes_pack_identity_and_electrical_detail(self) -> None:
+    def test_parse_pack_item_info_data_decodes_temperature_from_ntc_pair(self) -> None:
         data = bytearray(208)
         data[0:2] = (1).to_bytes(2, "big")
         data[2:18] = bytes([ord("P"), ord("A"), ord("C"), ord("K"), ord("S"), ord("N"), ord("0"), ord("1")]) + bytes(8)
@@ -114,6 +114,8 @@ class ParserTests(unittest.TestCase):
         data[20:22] = (98).to_bytes(2, "big")
         data[22:24] = (526).to_bytes(2, "big")
         data[24:26] = (12).to_bytes(2, "big", signed=True)
+        data[40:42] = (63).to_bytes(2, "big")
+        data[42:44] = (66).to_bytes(2, "big")
 
         parsed = parse_pack_item_info_data(bytes(data))
 
@@ -123,6 +125,7 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(parsed["packSoh"], 98)
         self.assertEqual(parsed["voltage"], 52.6)
         self.assertEqual(parsed["current"], 1.2)
+        self.assertEqual(parsed["averageTemp"], 24.5)
 
 
 if __name__ == "__main__":
