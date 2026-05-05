@@ -86,6 +86,11 @@ The Codex in-app browser screenshot after commit `76ea8c6` showed Grid `435W`, I
 `Pass-thru`, AC Loads `433W`, and an animated energy-flow line from Grid to Inverter / Charger and
 from Inverter / Charger to AC Loads.
 
+After the follow-up inverter detail correction, `com.victronenergy.inverter.ep760_32` carries the
+visible `/Ac/Out/L1/P` and `/Ac/Out/L1/I` values while `com.victronenergy.multi.ep760_32` remains the
+active-input compatibility service. This avoids the GUI inverter detail page showing `0W` during
+pass-through without causing systemcalc to sum the same AC output load twice.
+
 ## Validation Performed
 
 - Deployed the standalone gateway checkout to `/data/bluetti-venus-gateway`.

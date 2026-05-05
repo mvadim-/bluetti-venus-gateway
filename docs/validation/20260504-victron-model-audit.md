@@ -147,9 +147,10 @@ Supported paths:
 - `/Ac/Out/L1/S`
 - `/Ac/Out/L1/F`
 
-This service is kept for local GUI device semantics and inverter VRM logging. Venus OS v3.72 does
-not use inverter active-input paths for system active-source detection, so this service alone is not
-enough for Grid-to-Inverter flow.
+This service is kept for local GUI device semantics and inverter VRM logging. Venus GUIv2 opens this
+service from the Inverter / Charger overview tile, so `/Ac/Out/L1/P` and `/Ac/Out/L1/I` carry the
+visible AC output load. Venus OS v3.72 does not use inverter active-input paths for system
+active-source detection, so this service alone is not enough for Grid-to-Inverter flow.
 
 ### `com.victronenergy.multi.ep760_32`
 
@@ -180,8 +181,10 @@ Supported paths:
 - `/Ac/Out/L1/S`
 - `/Ac/Out/L1/F`
 
-This is the compatibility service Venus OS v3.72 needs for systemcalc and GUI flow rendering. Grid is
-published as Multi AC input 1. AC Loads are published as Multi AC output.
+This is the compatibility service Venus OS v3.72 needs for systemcalc active-source and GUI flow
+rendering. Grid is published as Multi AC input 1. When the native inverter service is enabled, AC
+output load is intentionally left to the inverter service so systemcalc does not sum the same load
+twice.
 
 ### `com.victronenergy.vebus.ep760_32`
 
@@ -223,9 +226,10 @@ Shared state contract for `inverter`, `multi`, and optional `vebus`:
 - active AC input is Grid: `/Ac/ActiveIn/ActiveInput = 0`, `/Ac/In/1/Type = 1`
 - no active AC input: `/Ac/ActiveIn/ActiveInput = 0xF0`, `/Ac/ActiveIn/Connected = 0`
 
-The bridge uses `inv_output_power_w` / `inverter_power_w` for inverter output state. It does not use
-`ac_load_power_w` as inverter output while Grid is present, because that double-counts pass-through
-load in systemcalc.
+The bridge publishes AC output load on exactly one inverter/charger service. With the native
+`inverter` service enabled, it carries `/Ac/Out/L1/P`; the `multi` compatibility service keeps AC
+output power/current absent to avoid double-counting in systemcalc. If the native inverter service is
+disabled, the Multi compatibility service carries AC output instead.
 Negative inverter power from `INV_INVERTER_INFO` represents charger direction and must not be
 published as `/Ac/Out/L1/P` or AC Loads consumption.
 

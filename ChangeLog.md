@@ -1,5 +1,11 @@
 # ChangeLog
 
+## [2026-05-05 16:10] Show pass-through AC output on inverter detail
+- Fixed Venus GUIv2 inverter detail page showing `AC Out L1` as `0W / 0.0A` during grid pass-through
+- Published visible AC output load on the native inverter service while keeping the Multi compatibility service from duplicating the same output load
+- Preserved Multi active-input compatibility for systemcalc and GUI flow without double-counting AC output consumption
+- Added regression coverage for native inverter AC output and Multi fallback behavior when the inverter service is disabled
+
 ## [2026-05-05 16:02] Fix charging inverter power projection
 - Fixed `INV_INVERTER_INFO` phase power decoding so BLUETTI charger-direction power is read as signed instead of appearing as impossible `64kW` output
 - Prevented negative inverter/charger power from being published as AC output or AC Loads consumption on inverter, Multi, and VE.Bus compatibility services

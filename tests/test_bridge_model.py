@@ -52,14 +52,16 @@ class BridgeModelTests(unittest.TestCase):
         self.assertEqual(payload["venus_inverter"]["values"]["/Ac/In/1/Type"], 1)
         self.assertEqual(payload["venus_inverter"]["values"]["/Ac/In/1/L1/I"], 4.2)
         self.assertEqual(payload["venus_inverter"]["values"]["/Ac/In/1/L1/P"], 920.0)
-        self.assertEqual(payload["venus_inverter"]["values"]["/Ac/Out/L1/P"], 0.0)
-        self.assertEqual(payload["venus_inverter"]["values"]["/Ac/Out/L1/I"], 0.0)
+        self.assertEqual(payload["venus_inverter"]["values"]["/Ac/Out/L1/P"], 650.0)
+        self.assertEqual(payload["venus_inverter"]["values"]["/Ac/Out/L1/I"], 2.8)
         self.assertEqual(payload["venus_inverter"]["values"]["/Soc"], 76.0)
         self.assertEqual(payload["venus_inverter"]["values"]["/Dc/0/Temperature"], 24.0)
         self.assertEqual(payload["venus_inverter"]["values"]["/Mode"], 3)
         self.assertEqual(payload["venus_inverter"]["values"]["/State"], 8)
         self.assertEqual(payload["venus_multi"]["values"]["/Ac/In/1/L1/P"], 920.0)
-        self.assertEqual(payload["venus_multi"]["values"]["/Ac/Out/L1/P"], 650.0)
+        self.assertIsNone(payload["venus_multi"]["values"]["/Ac/Out/L1/P"])
+        self.assertIsNone(payload["venus_multi"]["values"]["/Ac/Out/L1/I"])
+        self.assertIsNone(payload["venus_multi"]["values"]["/Ac/Out/L1/S"])
         self.assertEqual(payload["venus_multi"]["values"]["/Soc"], 76.0)
         self.assertEqual(payload["venus_multi"]["values"]["/Dc/0/Temperature"], 24.0)
         self.assertEqual(payload["venus_multi"]["values"]["/State"], 8)
@@ -86,7 +88,8 @@ class BridgeModelTests(unittest.TestCase):
         self.assertEqual(payload["venus_inverter"]["values"]["/Ac/ActiveIn/Connected"], 0)
         self.assertEqual(payload["venus_inverter"]["values"]["/State"], 9)
         self.assertEqual(payload["venus_multi"]["values"]["/Ac/ActiveIn/ActiveInput"], 0xF0)
-        self.assertEqual(payload["venus_multi"]["values"]["/Ac/Out/L1/P"], 420.0)
+        self.assertIsNone(payload["venus_multi"]["values"]["/Ac/Out/L1/P"])
+        self.assertIsNone(payload["venus_multi"]["values"]["/Ac/Out/L1/S"])
         self.assertEqual(payload["venus_multi"]["values"]["/State"], 9)
 
     def test_build_venus_bridge_payload_does_not_publish_charging_power_as_ac_load(self) -> None:
@@ -114,9 +117,30 @@ class BridgeModelTests(unittest.TestCase):
         self.assertEqual(payload["venus_inverter"]["values"]["/Ac/Out/L1/P"], 0.0)
         self.assertEqual(payload["venus_inverter"]["values"]["/Ac/Out/L1/I"], 0.0)
         self.assertEqual(payload["venus_multi"]["values"]["/State"], 3)
-        self.assertEqual(payload["venus_multi"]["values"]["/Ac/Out/L1/P"], 0.0)
-        self.assertEqual(payload["venus_multi"]["values"]["/Ac/Out/L1/I"], 0.0)
+        self.assertIsNone(payload["venus_multi"]["values"]["/Ac/Out/L1/P"])
+        self.assertIsNone(payload["venus_multi"]["values"]["/Ac/Out/L1/I"])
+        self.assertIsNone(payload["venus_multi"]["values"]["/Ac/Out/L1/S"])
         self.assertEqual(payload["venus_multi"]["values"]["/Dc/0/Power"], 1932.0)
+
+    def test_multi_carries_ac_output_when_native_inverter_service_is_disabled(self) -> None:
+        payload = build_venus_bridge_payload(
+            {
+                "device_sn": "EP760SN",
+                "freshness": {"state": "fresh", "age_seconds": 2},
+                "snapshot": {
+                    "grid_power_w": 420.0,
+                    "grid_voltage_v": 230.0,
+                    "ac_load_power_w": 418.0,
+                    "load_voltage_v": 231.0,
+                    "load_current_a": 1.8,
+                },
+            },
+            settings=VenusBridgeSettings(enable_inverter_service=False),
+        )
+
+        self.assertNotIn("venus_inverter", payload)
+        self.assertEqual(payload["venus_multi"]["values"]["/Ac/Out/L1/P"], 418.0)
+        self.assertEqual(payload["venus_multi"]["values"]["/Ac/Out/L1/I"], 1.8)
 
     def test_build_venus_bridge_payload_can_include_vebus_compat(self) -> None:
         payload = build_venus_bridge_payload(

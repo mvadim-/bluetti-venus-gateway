@@ -259,9 +259,9 @@ def _build_inverter_values(
     battery_soc: float | None,
     battery_temperature: float | None,
 ) -> dict[str, Any]:
-    load_power = _pick_inverter_ac_output_power(snapshot)
+    load_power = _pick_ac_output_power(snapshot)
     load_voltage = _pick_number(snapshot, "inv_output_voltage_v", "load_voltage_v", "grid_voltage_v")
-    load_current = _pick_inverter_output_current(snapshot, load_power=load_power, load_voltage=load_voltage)
+    load_current = _pick_ac_output_current(snapshot, output_power=load_power, output_voltage=load_voltage)
     frequency = _pick_number(snapshot, "inv_output_freq_hz", "grid_freq_hz")
     grid_power = _pick_number(snapshot, "grid_power_w", "grid_power_w_phase_1", "grid_charge_power_w")
     grid_voltage = _pick_number(snapshot, "grid_voltage_v")
@@ -321,17 +321,6 @@ def _pick_inverter_power(snapshot: dict[str, Any]) -> float | None:
     return None
 
 
-def _pick_inverter_ac_output_power(snapshot: dict[str, Any]) -> float | None:
-    inverter_power = _pick_inverter_power(snapshot)
-    if inverter_power is not None:
-        return 0.0 if inverter_power < -INVERTER_OUTPUT_EPSILON_W else inverter_power
-    ac_load_power = _pick_number(snapshot, "ac_load_power_w", "ac_power_w")
-    grid_power = _pick_number(snapshot, "grid_power_w", "grid_power_w_phase_1", "grid_charge_power_w")
-    if ac_load_power is not None and grid_power is None:
-        return ac_load_power
-    return None
-
-
 def _pick_ac_output_power(snapshot: dict[str, Any]) -> float | None:
     ac_load_power = _pick_number(snapshot, "ac_load_power_w", "ac_power_w")
     if ac_load_power is not None:
@@ -349,20 +338,6 @@ def _pick_battery_power(snapshot: dict[str, Any]) -> float | None:
     voltage = _pick_number(snapshot, "battery_voltage_v", "pack_total_voltage_v", "pack_voltage_v")
     current = _pick_number(snapshot, "battery_current_a", "pack_total_current_a", "pack_current_a")
     return _calculate_power(voltage, current)
-
-
-def _pick_inverter_output_current(
-    snapshot: dict[str, Any],
-    *,
-    load_power: float | None,
-    load_voltage: float | None,
-) -> float | None:
-    if load_power is not None and abs(load_power) <= INVERTER_OUTPUT_EPSILON_W:
-        return 0.0
-    return _pick_number(snapshot, "inv_output_current_a", "load_current_a") or _calculate_current(
-        load_power,
-        load_voltage,
-    )
 
 
 def _pick_ac_output_current(
@@ -478,13 +453,17 @@ def _build_multi_values(
     grid_connected = any(value is not None for value in (grid_power, grid_voltage, grid_current, grid_frequency))
     active_input = 0 if grid_connected else AC_INPUT_NOT_CONNECTED
 
-    output_power = _pick_ac_output_power(snapshot)
     output_voltage = _pick_number(snapshot, "load_voltage_v", "inv_output_voltage_v", "grid_voltage_v")
-    output_current = _pick_ac_output_current(
-        snapshot,
-        output_power=output_power,
-        output_voltage=output_voltage,
-    )
+    if settings.enable_inverter_service:
+        output_power = None
+        output_current = None
+    else:
+        output_power = _pick_ac_output_power(snapshot)
+        output_current = _pick_ac_output_current(
+            snapshot,
+            output_power=output_power,
+            output_voltage=output_voltage,
+        )
     output_frequency = _pick_number(snapshot, "inv_output_freq_hz", "grid_freq_hz")
     inverter_power = _pick_inverter_power(snapshot)
     dc_power = _pick_battery_power(snapshot)
