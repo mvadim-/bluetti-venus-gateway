@@ -41,7 +41,7 @@
   - `env PYTHONPATH=src python3 -m unittest discover -s tests` (`28` tests)
   - `python3 -m compileall -q src`
   - `bash -n venus/install-venus.sh venus/update-venus.sh venus/repair-if-needed.sh venus/status.sh venus/restart.sh venus/logs.sh venus/uninstall-venus.sh venus/build-offline-bundle.sh venus/lib/offline-bundle.sh venus/services/bluetti-collector/run venus/services/bluetti-dbus-bridge/run venus/services/bluetti-repair-on-boot/run`
-  - `PYTHONPATH=backend/src python3 -m unittest backend.tests.bluetti.test_parser backend.tests.victron.test_bridge_model backend.tests.victron.test_projection_parity` in the reference `bluettiMonitor` repo (`11` tests)
+  - parser and Victron bridge parity tests in the historical reference repo (`11` tests)
   - v1 bridge service parity check against the reference Victron bridge model
   - `git diff --check`
 
@@ -376,3 +376,14 @@
 - Updated `install-venus.sh` to install/configure `ntp` by default through opkg, add external NTP
   servers, and restart `ntpd`
 - Updated README, Raspberry Pi deploy docs, and implementation plan notes
+
+## [2026-05-05 11:08] Add standalone Codex project documentation
+- Added `AGENTS.md` with repository-specific workflow, runtime, testing, security, and deploy
+  guidance for using this repo as an independent Codex workspace
+- Moved the Raspberry Pi 5 implementation plan into `docs/plans/completed/` and condensed it into a
+  standalone completed-state summary
+- Added standalone research references:
+  - `docs/research/bluetti-modbus-data-map.md`
+  - `docs/research/telemetry-signal-map.md`
+  - `docs/research/mqtt-display-parameters.md`
+- Updated `README.md` with a developer documentation index

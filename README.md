@@ -47,6 +47,18 @@ Expected services after BLUETTI credentials are configured:
 
 See [docs/deploy/bluetti-venus-gateway-rpi5.md](docs/deploy/bluetti-venus-gateway-rpi5.md).
 
+## Developer Documentation
+
+- [AGENTS.md](AGENTS.md): standalone Codex/developer workflow rules for this repository.
+- [docs/plans/completed/20260430-venus-gateway-rpi5.md](docs/plans/completed/20260430-venus-gateway-rpi5.md):
+  completed Raspberry Pi 5 implementation plan and final state summary.
+- [docs/research/bluetti-modbus-data-map.md](docs/research/bluetti-modbus-data-map.md):
+  BLUETTI register group map for future parser and polling work.
+- [docs/research/telemetry-signal-map.md](docs/research/telemetry-signal-map.md):
+  normalized signal source map and fallback policy.
+- [docs/research/mqtt-display-parameters.md](docs/research/mqtt-display-parameters.md):
+  display/Victron projection parameter reference.
+
 ## Offline Bundle
 
 Build a recovery artifact on a development machine:
