@@ -187,7 +187,7 @@ added later, model the UI as a list/table keyed by `pack_id` or `pack_sn`.
 | `pack_soh` | % | `PACK_ITEM_INFO.packSoh` | Individual pack state of health. | Pack health detail. |
 | `pack_voltage_v` | V | `PACK_ITEM_INFO.voltage` | Individual pack voltage. | Pack electrical detail. |
 | `pack_current_a` | A | `PACK_ITEM_INFO.current` | Individual pack current. | Pack electrical detail. |
-| `pack_temp_c` | Celsius | `PACK_ITEM_INFO.averageTemp` | Individual pack average temperature. | Pack thermal detail. |
+| `pack_temp_c` | Celsius | `PACK_ITEM_INFO.averageTemp` | Individual pack average temperature. | Not normalized until the live EP760 offset is validated. |
 | `pack_protection` | array/string | `PACK_ITEM_INFO.packProtectNames` | Pack item protection statuses. | Pack warning/protection detail. |
 | `pack_warnings` | array/string | `PACK_ITEM_INFO.packHighVoltAlarmNames` | Pack item warning names. | Pack warning detail. |
 | `pack_faults` | array/string | `PACK_ITEM_INFO.packSysErrNames` | Pack item fault names. | Pack fault detail. |

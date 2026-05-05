@@ -6,6 +6,7 @@
 - Enabled pack diagnostics by default for new configs while keeping PV polling disabled by default
 - Added Victron battery `/Alarms/LowTemperature` and `/Alarms/HighTemperature` paths with optional
   `BLUETTI_BATTERY_LOW_TEMP_ALARM_C` and `BLUETTI_BATTERY_HIGH_TEMP_ALARM_C` thresholds
+- Kept pack-item temperature out of the normalized snapshot until the live `6100` offset is validated
 
 ## [2026-05-05 16:10] Show pass-through AC output on inverter detail
 - Fixed Venus GUIv2 inverter detail page showing `AC Out L1` as `0W / 0.0A` during grid pass-through

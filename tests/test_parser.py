@@ -106,7 +106,7 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(decoded["messageType"], "packMainInfo")
         self.assertEqual(decoded["packMainInfo"]["averageTemp"], 24.5)
 
-    def test_parse_pack_item_info_data_decodes_pack_temperature_fallback(self) -> None:
+    def test_parse_pack_item_info_data_decodes_pack_identity_and_electrical_detail(self) -> None:
         data = bytearray(208)
         data[0:2] = (1).to_bytes(2, "big")
         data[2:18] = bytes([ord("P"), ord("A"), ord("C"), ord("K"), ord("S"), ord("N"), ord("0"), ord("1")]) + bytes(8)
@@ -114,7 +114,6 @@ class ParserTests(unittest.TestCase):
         data[20:22] = (98).to_bytes(2, "big")
         data[22:24] = (526).to_bytes(2, "big")
         data[24:26] = (12).to_bytes(2, "big", signed=True)
-        data[26:28] = (23).to_bytes(2, "big", signed=True)
 
         parsed = parse_pack_item_info_data(bytes(data))
 
@@ -124,7 +123,6 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(parsed["packSoh"], 98)
         self.assertEqual(parsed["voltage"], 52.6)
         self.assertEqual(parsed["current"], 1.2)
-        self.assertEqual(parsed["averageTemp"], 23.0)
 
 
 if __name__ == "__main__":

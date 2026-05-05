@@ -63,7 +63,6 @@ PACK_ITEM_SIGNAL_MAP = {
     "packSoh": "pack_soh",
     "voltage": "pack_voltage_v",
     "current": "pack_current_a",
-    "averageTemp": "pack_temp_c",
 }
 
 
@@ -293,7 +292,6 @@ def parse_pack_item_info_data(data: bytes) -> dict[str, Any]:
         "packSoh": _u16be(data, 20) if len(data) >= 22 else None,
         "voltage": _u16be(data, 22) / 10.0 if len(data) >= 24 else None,
         "current": _s16be(data, 24) / 10.0 if len(data) >= 26 else None,
-        "averageTemp": _temperature_c(data, 26) if len(data) >= 28 else None,
     }
     return result
 
