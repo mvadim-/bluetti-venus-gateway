@@ -1,5 +1,11 @@
 # ChangeLog
 
+## [2026-05-05 16:02] Fix charging inverter power projection
+- Fixed `INV_INVERTER_INFO` phase power decoding so BLUETTI charger-direction power is read as signed instead of appearing as impossible `64kW` output
+- Prevented negative inverter/charger power from being published as AC output or AC Loads consumption on inverter, Multi, and VE.Bus compatibility services
+- Mapped grid-connected battery charging to Victron `Bulk charging` state instead of `Inverting`
+- Added regression coverage for signed inverter power decoding and AC output projection during charging
+
 ## [2026-05-05 14:26] Fix battery lifecycle state for Venus GUI
 - Fixed BLUETTI battery D-Bus `/State` publishing charge/discharge numeric values that GUIv2 rendered as `Initializing`
 - Changed connected battery service state to Victron battery lifecycle `Running` while keeping charge/discharge direction on current and power paths

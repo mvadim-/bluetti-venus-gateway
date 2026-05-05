@@ -89,6 +89,35 @@ class BridgeModelTests(unittest.TestCase):
         self.assertEqual(payload["venus_multi"]["values"]["/Ac/Out/L1/P"], 420.0)
         self.assertEqual(payload["venus_multi"]["values"]["/State"], 9)
 
+    def test_build_venus_bridge_payload_does_not_publish_charging_power_as_ac_load(self) -> None:
+        payload = build_venus_bridge_payload(
+            {
+                "device_sn": "EP760SN",
+                "freshness": {"state": "fresh", "age_seconds": 2},
+                "snapshot": {
+                    "soc": 97.0,
+                    "battery_voltage_v": 105.0,
+                    "battery_current_a": 18.4,
+                    "grid_power_w": 2462.0,
+                    "grid_voltage_v": 231.0,
+                    "grid_freq_hz": 49.9,
+                    "inv_output_power_w": -1432.0,
+                    "inv_output_voltage_v": 231.0,
+                    "inv_output_current_a": 6.2,
+                    "inv_output_freq_hz": 49.9,
+                },
+            },
+            settings=VenusBridgeSettings(),
+        )
+
+        self.assertEqual(payload["venus_inverter"]["values"]["/State"], 3)
+        self.assertEqual(payload["venus_inverter"]["values"]["/Ac/Out/L1/P"], 0.0)
+        self.assertEqual(payload["venus_inverter"]["values"]["/Ac/Out/L1/I"], 0.0)
+        self.assertEqual(payload["venus_multi"]["values"]["/State"], 3)
+        self.assertEqual(payload["venus_multi"]["values"]["/Ac/Out/L1/P"], 0.0)
+        self.assertEqual(payload["venus_multi"]["values"]["/Ac/Out/L1/I"], 0.0)
+        self.assertEqual(payload["venus_multi"]["values"]["/Dc/0/Power"], 1932.0)
+
     def test_build_venus_bridge_payload_can_include_vebus_compat(self) -> None:
         payload = build_venus_bridge_payload(
             {

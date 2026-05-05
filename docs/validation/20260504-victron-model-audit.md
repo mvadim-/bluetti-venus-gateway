@@ -217,14 +217,17 @@ Validated live outputs after the Multi compatibility fix:
 Shared state contract for `inverter`, `multi`, and optional `vebus`:
 
 - disconnected or stale telemetry: `/Connected = 0`, `/Mode = 4`, `/State = 0`
+- grid input present and battery charging from AC input: `/State = 3` (`Bulk charging`)
 - grid input present and real inverter output power is `<= 5W`: `/State = 8` (`Pass-thru`)
-- real inverter output power is `> 5W`: `/State = 9` (`Inverting`)
+- real inverter output power is `> 5W` without active Grid input: `/State = 9` (`Inverting`)
 - active AC input is Grid: `/Ac/ActiveIn/ActiveInput = 0`, `/Ac/In/1/Type = 1`
 - no active AC input: `/Ac/ActiveIn/ActiveInput = 0xF0`, `/Ac/ActiveIn/Connected = 0`
 
 The bridge uses `inv_output_power_w` / `inverter_power_w` for inverter output state. It does not use
 `ac_load_power_w` as inverter output while Grid is present, because that double-counts pass-through
 load in systemcalc.
+Negative inverter power from `INV_INVERTER_INFO` represents charger direction and must not be
+published as `/Ac/Out/L1/P` or AC Loads consumption.
 
 ## Regression Coverage
 

@@ -248,7 +248,7 @@ def parse_inv_inv_info_data(data: bytes) -> dict[str, Any]:
             {
                 "phase": phase_index + 1,
                 "workStatus": data[offset + 1] if len(data) > offset + 1 else None,
-                "invPower": _u16be(data, offset + 2) if len(data) > offset + 3 else None,
+                "invPower": _s16be(data, offset + 2) if len(data) > offset + 3 else None,
                 "invVoltage": _u16be(data, offset + 4) / 10.0 if len(data) > offset + 5 else None,
                 "invCurrent": _u16be(data, offset + 6) / 10.0 if len(data) > offset + 7 else None,
                 "invFreq": frequency,

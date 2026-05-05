@@ -14,6 +14,7 @@ INVERTER_OUTPUT_EPSILON_W = 5.0
 AC_INPUT_NOT_CONNECTED = 0xF0
 AC_INPUT_TYPE_GRID = 1
 SYSTEM_STATE_OFF = 0
+SYSTEM_STATE_BULK_CHARGING = 3
 SYSTEM_STATE_PASS_THROUGH = 8
 SYSTEM_STATE_INVERTING = 9
 BATTERY_STATE_RUNNING = 9
@@ -258,7 +259,7 @@ def _build_inverter_values(
     battery_soc: float | None,
     battery_temperature: float | None,
 ) -> dict[str, Any]:
-    load_power = _pick_inverter_output_power(snapshot)
+    load_power = _pick_inverter_ac_output_power(snapshot)
     load_voltage = _pick_number(snapshot, "inv_output_voltage_v", "load_voltage_v", "grid_voltage_v")
     load_current = _pick_inverter_output_current(snapshot, load_power=load_power, load_voltage=load_voltage)
     frequency = _pick_number(snapshot, "inv_output_freq_hz", "grid_freq_hz")
@@ -267,10 +268,16 @@ def _build_inverter_values(
     grid_current = _pick_number(snapshot, "grid_current_a") or _calculate_current(grid_power, grid_voltage)
     grid_connected = any(value is not None for value in (grid_power, grid_voltage, grid_current))
     active_input = 0 if grid_connected else AC_INPUT_NOT_CONNECTED
-    dc_power = -load_power if load_power is not None else None
+    dc_power = _pick_battery_power(snapshot)
+    if dc_power is None:
+        dc_power = -load_power if load_power is not None else None
     dc_current = _calculate_current(dc_power, battery_voltage)
     connected = 1 if any(value is not None for value in (load_power, load_voltage, load_current, frequency)) else 0
-    state = _derive_inverter_state(snapshot=snapshot, connected=connected == 1, inverter_power=load_power)
+    state = _derive_inverter_state(
+        snapshot=snapshot,
+        connected=connected == 1,
+        inverter_power=_pick_inverter_power(snapshot),
+    )
     return {
         "/Connected": connected,
         "/CustomName": settings.inverter_custom_name,
@@ -307,15 +314,41 @@ def _build_inverter_values(
     }
 
 
-def _pick_inverter_output_power(snapshot: dict[str, Any]) -> float | None:
+def _pick_inverter_power(snapshot: dict[str, Any]) -> float | None:
     inverter_power = _pick_number(snapshot, "inv_output_power_w", "inverter_power_w")
     if inverter_power is not None:
         return inverter_power
+    return None
+
+
+def _pick_inverter_ac_output_power(snapshot: dict[str, Any]) -> float | None:
+    inverter_power = _pick_inverter_power(snapshot)
+    if inverter_power is not None:
+        return 0.0 if inverter_power < -INVERTER_OUTPUT_EPSILON_W else inverter_power
     ac_load_power = _pick_number(snapshot, "ac_load_power_w", "ac_power_w")
     grid_power = _pick_number(snapshot, "grid_power_w", "grid_power_w_phase_1", "grid_charge_power_w")
     if ac_load_power is not None and grid_power is None:
         return ac_load_power
     return None
+
+
+def _pick_ac_output_power(snapshot: dict[str, Any]) -> float | None:
+    ac_load_power = _pick_number(snapshot, "ac_load_power_w", "ac_power_w")
+    if ac_load_power is not None:
+        return ac_load_power
+    inverter_power = _pick_inverter_power(snapshot)
+    if inverter_power is None:
+        return None
+    return 0.0 if inverter_power < -INVERTER_OUTPUT_EPSILON_W else inverter_power
+
+
+def _pick_battery_power(snapshot: dict[str, Any]) -> float | None:
+    power = _pick_number(snapshot, "dc_power_w")
+    if power is not None:
+        return power
+    voltage = _pick_number(snapshot, "battery_voltage_v", "pack_total_voltage_v", "pack_voltage_v")
+    current = _pick_number(snapshot, "battery_current_a", "pack_total_current_a", "pack_current_a")
+    return _calculate_power(voltage, current)
 
 
 def _pick_inverter_output_current(
@@ -332,6 +365,20 @@ def _pick_inverter_output_current(
     )
 
 
+def _pick_ac_output_current(
+    snapshot: dict[str, Any],
+    *,
+    output_power: float | None,
+    output_voltage: float | None,
+) -> float | None:
+    if output_power is not None and abs(output_power) <= INVERTER_OUTPUT_EPSILON_W:
+        return 0.0
+    return _pick_number(snapshot, "load_current_a", "inv_output_current_a") or _calculate_current(
+        output_power,
+        output_voltage,
+    )
+
+
 def _derive_inverter_state(
     *,
     snapshot: dict[str, Any],
@@ -340,14 +387,22 @@ def _derive_inverter_state(
 ) -> int:
     if not connected:
         return SYSTEM_STATE_OFF
-    if inverter_power is not None and abs(inverter_power) > INVERTER_OUTPUT_EPSILON_W:
+    grid_connected = _has_grid_input(snapshot)
+    battery_power = _pick_battery_power(snapshot)
+    if grid_connected and battery_power is not None and battery_power > INVERTER_OUTPUT_EPSILON_W:
+        return SYSTEM_STATE_BULK_CHARGING
+    if inverter_power is not None and inverter_power > INVERTER_OUTPUT_EPSILON_W and not grid_connected:
         return SYSTEM_STATE_INVERTING
+    if grid_connected:
+        return SYSTEM_STATE_PASS_THROUGH
+    return SYSTEM_STATE_INVERTING
+
+
+def _has_grid_input(snapshot: dict[str, Any]) -> bool:
     grid_power = _pick_number(snapshot, "grid_power_w", "grid_power_w_phase_1", "grid_charge_power_w")
     grid_voltage = _pick_number(snapshot, "grid_voltage_v")
     grid_current = _pick_number(snapshot, "grid_current_a")
-    if any(value is not None for value in (grid_power, grid_voltage, grid_current)):
-        return SYSTEM_STATE_PASS_THROUGH
-    return SYSTEM_STATE_INVERTING
+    return any(value is not None for value in (grid_power, grid_voltage, grid_current))
 
 
 def _build_vebus_values(
@@ -362,13 +417,15 @@ def _build_vebus_values(
     grid_power = _pick_number(snapshot, "grid_power_w", "grid_power_w_phase_1", "grid_charge_power_w")
     grid_voltage = _pick_number(snapshot, "grid_voltage_v")
     grid_current = _pick_number(snapshot, "grid_current_a") or _calculate_current(grid_power, grid_voltage)
-    load_power = _pick_number(snapshot, "ac_load_power_w", "ac_power_w", "inv_output_power_w")
+    load_power = _pick_ac_output_power(snapshot)
     load_voltage = _pick_number(snapshot, "load_voltage_v", "inv_output_voltage_v", "grid_voltage_v")
-    load_current = _pick_number(snapshot, "load_current_a", "inv_output_current_a") or _calculate_current(load_power, load_voltage)
+    load_current = _pick_ac_output_current(snapshot, output_power=load_power, output_voltage=load_voltage)
     connected = 1 if any(value is not None for value in (grid_power, load_power, load_voltage, load_current)) else 0
-    inverter_power = _pick_inverter_output_power(snapshot)
+    inverter_power = _pick_inverter_power(snapshot)
     state = _derive_inverter_state(snapshot=snapshot, connected=connected == 1, inverter_power=inverter_power)
-    dc_power = -inverter_power if inverter_power is not None else None
+    dc_power = _pick_battery_power(snapshot)
+    if dc_power is None:
+        dc_power = -load_power if load_power is not None else None
     dc_current = _calculate_current(dc_power, battery_voltage)
     active_input = 0 if any(value is not None for value in (grid_power, grid_voltage, grid_current)) else 0xF0
     return {
@@ -421,15 +478,18 @@ def _build_multi_values(
     grid_connected = any(value is not None for value in (grid_power, grid_voltage, grid_current, grid_frequency))
     active_input = 0 if grid_connected else AC_INPUT_NOT_CONNECTED
 
-    output_power = _pick_number(snapshot, "ac_load_power_w", "ac_power_w", "inv_output_power_w")
+    output_power = _pick_ac_output_power(snapshot)
     output_voltage = _pick_number(snapshot, "load_voltage_v", "inv_output_voltage_v", "grid_voltage_v")
-    output_current = _pick_number(snapshot, "load_current_a", "inv_output_current_a") or _calculate_current(
-        output_power,
-        output_voltage,
+    output_current = _pick_ac_output_current(
+        snapshot,
+        output_power=output_power,
+        output_voltage=output_voltage,
     )
     output_frequency = _pick_number(snapshot, "inv_output_freq_hz", "grid_freq_hz")
-    inverter_power = _pick_inverter_output_power(snapshot)
-    dc_power = -inverter_power if inverter_power is not None else None
+    inverter_power = _pick_inverter_power(snapshot)
+    dc_power = _pick_battery_power(snapshot)
+    if dc_power is None:
+        dc_power = -output_power if output_power is not None else None
     dc_current = _calculate_current(dc_power, battery_voltage)
     connected = 1 if any(
         value is not None

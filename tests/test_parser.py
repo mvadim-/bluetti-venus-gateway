@@ -4,6 +4,7 @@ import unittest
 
 from bluetti_venus_gateway.bluetti.parser import normalize_decoded_state
 from bluetti_venus_gateway.bluetti.parser import parse_inv_grid_info_data
+from bluetti_venus_gateway.bluetti.parser import parse_inv_inv_info_data
 
 
 class ParserTests(unittest.TestCase):
@@ -47,6 +48,21 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(parsed["gridPower"], 924)
         self.assertEqual(parsed["gridVoltage"], 231.0)
         self.assertEqual(parsed["gridCurrent"], 4.0)
+
+    def test_parse_inv_inv_info_data_decodes_signed_phase_power(self) -> None:
+        data = bytearray(30)
+        data[0:2] = (500).to_bytes(2, "big")
+        data[17] = 1
+        data[19] = 1
+        data[20:22] = (-1432).to_bytes(2, "big", signed=True)
+        data[22:24] = (2310).to_bytes(2, "big")
+        data[24:26] = (62).to_bytes(2, "big")
+
+        parsed = parse_inv_inv_info_data(bytes(data))
+
+        self.assertEqual(parsed["phase1InvPower"], -1432)
+        self.assertEqual(parsed["phase1InvVoltage"], 231.0)
+        self.assertEqual(parsed["phase1InvCurrent"], 6.2)
 
 
 if __name__ == "__main__":
