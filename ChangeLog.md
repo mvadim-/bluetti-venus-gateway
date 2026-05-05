@@ -1,5 +1,10 @@
 # ChangeLog
 
+## [2026-05-05 14:26] Fix battery lifecycle state for Venus GUI
+- Fixed BLUETTI battery D-Bus `/State` publishing charge/discharge numeric values that GUIv2 rendered as `Initializing`
+- Changed connected battery service state to Victron battery lifecycle `Running` while keeping charge/discharge direction on current and power paths
+- Updated Victron model audit documentation and bridge model coverage for the battery state contract
+
 ## [2026-05-05 11:36] Fix EP760 Venus GUI gauge ranges
 - Fixed Venus GUIv2 Grid and Inverter / Charger side gauges using auto-learned `16.7A` limits instead of EP760 ratings
 - Added fixed GUI gauge settings for Grid input `50A` and inverter/load output `33A`, with `AutoMax` disabled by default

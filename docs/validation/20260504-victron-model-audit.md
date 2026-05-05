@@ -84,9 +84,10 @@ Supported paths:
 
 State mapping:
 
-- charging when `charging_status` says charge/grid/PV or battery current is positive
-- discharging when `charging_status` says discharge or battery current is negative
-- idle when current is near zero or no more specific state is available
+- `/State = 9` (`Running`) while connected telemetry is available
+- `/Connected = 0` when telemetry is stale or unavailable
+- charge/discharge direction is represented by `/Dc/0/Power` and `/Dc/0/Current`, not by battery
+  lifecycle `/State`
 
 Unsupported VRM battery fields are intentionally omitted instead of faked: SOH, time-to-go,
 starter voltage, BMS/cell/module alarms, and max charge/discharge limits.

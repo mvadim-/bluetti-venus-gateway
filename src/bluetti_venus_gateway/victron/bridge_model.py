@@ -16,6 +16,8 @@ AC_INPUT_TYPE_GRID = 1
 SYSTEM_STATE_OFF = 0
 SYSTEM_STATE_PASS_THROUGH = 8
 SYSTEM_STATE_INVERTING = 9
+BATTERY_STATE_RUNNING = 9
+BATTERY_STATE_UNKNOWN = 11
 
 
 @dataclass(frozen=True)
@@ -171,8 +173,9 @@ def _build_battery_values(snapshot: dict[str, Any], *, settings: VenusBridgeSett
     current = _pick_number(snapshot, "battery_current_a", "pack_total_current_a", "pack_current_a")
     power = _pick_number(snapshot, "dc_power_w") or _calculate_power(voltage, current)
     temperature = _pick_number(snapshot, "pack_avg_temp_c", "pack_temp_c")
+    connected = any(value is not None for value in (soc, voltage, current, power))
     return {
-        "/Connected": 1 if any(value is not None for value in (soc, voltage, current, power)) else 0,
+        "/Connected": 1 if connected else 0,
         "/CustomName": settings.battery_custom_name,
         "/DeviceInstance": settings.battery_device_instance,
         "/ProductId": settings.product_id,
@@ -182,7 +185,7 @@ def _build_battery_values(snapshot: dict[str, Any], *, settings: VenusBridgeSett
         "/Capacity": _calculate_capacity(settings.installed_capacity_ah, soc),
         "/ConsumedAmphours": _calculate_consumed_ah(settings.installed_capacity_ah, soc),
         "/InstalledCapacity": settings.installed_capacity_ah,
-        "/State": _derive_battery_state(snapshot=snapshot, current=current),
+        "/State": BATTERY_STATE_RUNNING if connected else BATTERY_STATE_UNKNOWN,
         "/Dc/0/Voltage": voltage,
         "/Dc/0/Current": current,
         "/Dc/0/Power": power,
@@ -528,21 +531,6 @@ def _derive_alarm(value: float | None, threshold: float | None, direction: str) 
     if direction == "low":
         return 2 if value <= threshold else 0
     return 2 if value >= threshold else 0
-
-
-def _derive_battery_state(snapshot: dict[str, Any], current: float | None) -> int:
-    charging_status = str(snapshot.get("charging_status") or "").strip().lower()
-    if "discharg" in charging_status:
-        return 2
-    if "charg" in charging_status or charging_status in {"grid", "pv"}:
-        return 1
-    if current is None:
-        return 0
-    if current > 0.2:
-        return 1
-    if current < -0.2:
-        return 2
-    return 0
 
 
 def _ensure_aware_utc(value: datetime) -> datetime:

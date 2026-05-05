@@ -40,6 +40,7 @@ class BridgeModelTests(unittest.TestCase):
         self.assertEqual(payload["venus_multi"]["service_name"], "com.victronenergy.multi.ep760_32")
         self.assertNotIn("venus_vebus", payload)
         self.assertEqual(payload["venus_battery"]["values"]["/Soc"], 76.0)
+        self.assertEqual(payload["venus_battery"]["values"]["/State"], 9)
         self.assertEqual(payload["venus_battery"]["values"]["/Dc/0/Power"], -646.04)
         self.assertEqual(payload["venus_grid"]["values"]["/Ac/L1/Power"], 920.0)
         self.assertEqual(payload["venus_grid"]["values"]["/Ac/L1/Energy/Forward"], 123.4)
@@ -129,6 +130,23 @@ class BridgeModelTests(unittest.TestCase):
         self.assertEqual(payload["venus_grid"]["values"]["/Connected"], 0)
         self.assertEqual(payload["venus_ac_load"]["values"]["/Connected"], 0)
         self.assertEqual(payload["venus_inverter"]["values"]["/Connected"], 0)
+
+    def test_build_venus_bridge_payload_uses_battery_lifecycle_state(self) -> None:
+        payload = build_venus_bridge_payload(
+            {
+                "device_sn": "EP760SN",
+                "freshness": {"state": "fresh", "age_seconds": 2},
+                "snapshot": {
+                    "soc": 80,
+                    "battery_voltage_v": 104.0,
+                    "battery_current_a": -3.0,
+                },
+            },
+            settings=VenusBridgeSettings(),
+        )
+
+        self.assertEqual(payload["venus_battery"]["values"]["/Connected"], 1)
+        self.assertEqual(payload["venus_battery"]["values"]["/State"], 9)
 
     def test_build_venus_bridge_payload_does_not_raise_unconfigured_voltage_alarms(self) -> None:
         payload = build_venus_bridge_payload(
