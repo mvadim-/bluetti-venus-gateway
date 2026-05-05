@@ -42,8 +42,8 @@ Gateway snapshots expose:
 | `INV_GRID_INFO` | `1300` | Live grid voltage/current/frequency/power and grid energy counters. |
 | `INV_LOAD_INFO` | `1400` | AC/DC load power and first-phase load voltage/current. |
 | `INV_INVERTER_INFO` | `1500` | Inverter output power/voltage/current/frequency. |
-| `PACK_MAIN_INFO` | `6000` | Battery pack aggregate SOC/SOH/voltage/current/count and pack-level warnings/faults. |
-| `PACK_ITEM_INFO` | `6100` | Battery pack NTC temperature and future pack item warnings/faults. |
+| `PACK_MAIN_INFO` | `6000` | Battery pack aggregate SOC/SOH/temperature/voltage/current/count and pack-level warnings/faults. |
+| `PACK_ITEM_INFO` | `6100` | Future pack item warnings/faults; not used for EP760 battery temperature. |
 
 ## Transport And Metadata
 
@@ -166,6 +166,7 @@ Frontend flow-board fallback logic:
 | --- | --- | --- | --- | --- |
 | `pack_total_soc` | % | `PACK_MAIN_INFO.totalSOC` | Aggregate pack SOC. | Primary Battery tile value. |
 | `pack_total_soh` | % | `PACK_MAIN_INFO.totalSOH` | Aggregate pack state of health. | Battery health tile/detail. |
+| `pack_avg_temp_c` | Celsius | `PACK_MAIN_INFO.averageTemp` | Battery temperature from `PACK_MAIN_INFO` data offset 14 as `uint16_be - 40`. | Battery thermal detail and Victron `/Dc/0/Temperature`. |
 | `pack_total_voltage_v` | V | `PACK_MAIN_INFO.totalVoltage` | Aggregate pack voltage. | Battery voltage fallback/detail. |
 | `pack_total_current_a` | A | `PACK_MAIN_INFO.totalCurrent` | Aggregate pack current. | Battery current fallback/detail. |
 | `pack_count` | count | `PACK_MAIN_INFO.packCnts` | Number of battery packs. | Battery inventory/status. |
@@ -175,12 +176,11 @@ Frontend flow-board fallback logic:
 
 ## Battery Pack Item
 
-Only the live EP760 NTC temperature pair is normalized from the pack item payload for now. Other
-pack-item offsets are left out until they are validated against live BLUETTI app values.
+The live EP760 battery temperature is normalized from `PACK_MAIN_INFO (6000)`, not from this group.
+Pack-item offsets are left out until they are validated against live BLUETTI app values.
 
 | Normalized key | Type/unit | Source field | Description | Suggested UI use |
 | --- | --- | --- | --- | --- |
-| `pack_temp_c` | Celsius | `PACK_ITEM_INFO` NTC pair | Average of the live EP760 pack-item NTC pair after the BLUETTI `+40` offset is removed. | Battery thermal detail and Victron `/Dc/0/Temperature`. |
 | `pack_protection` | array/string | `PACK_ITEM_INFO.packProtectNames` | Pack item protection statuses. | Pack warning/protection detail. |
 | `pack_warnings` | array/string | `PACK_ITEM_INFO.packHighVoltAlarmNames` | Pack item warning names. | Pack warning detail. |
 | `pack_faults` | array/string | `PACK_ITEM_INFO.packSysErrNames` | Pack item fault names. | Pack fault detail. |

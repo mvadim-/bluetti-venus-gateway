@@ -229,7 +229,7 @@ class BridgeModelTests(unittest.TestCase):
             {
                 "device_sn": "EP760SN",
                 "freshness": {"state": "fresh", "age_seconds": 2},
-                "snapshot": {"soc": 76, "pack_temp_c": -1.0},
+                "snapshot": {"soc": 76, "pack_avg_temp_c": -1.0},
             },
             settings=VenusBridgeSettings(battery_low_temp_alarm_c=0.0, battery_high_temp_alarm_c=45.0),
         )
