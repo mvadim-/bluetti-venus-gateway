@@ -1,5 +1,12 @@
 # ChangeLog
 
+## [2026-05-07 14:23] Serialize BLUETTI MQTT polling
+- Changed `bluetti-collector` to send only one BLUETTI read request at a time and wait for the
+  matching response before publishing the next queued poll
+- Added a per-request timeout based on `BLUETTI_POLL_INTERVAL_SECONDS` so one missing response does
+  not block the polling queue forever
+- Added regression coverage for sequential polling and timeout advance behavior
+
 ## [2026-05-05 16:32] Add battery temperature diagnostics and alarms
 - Added BLUETTI `PACK_MAIN_INFO (6000)` and `PACK_ITEM_INFO (6100)` decoding for pack SOC/SOH,
   voltage, current, count, and temperature

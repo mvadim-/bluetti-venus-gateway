@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import argparse
+from collections import deque
 import json
 import logging
 import os
 from datetime import datetime
 from datetime import timezone
 from pathlib import Path
+import threading
 import time
 
 from bluetti_venus_gateway.bluetti.auth import BluettiAuthError
@@ -21,6 +23,7 @@ from bluetti_venus_gateway.bluetti.parser import merge_decoded_state
 from bluetti_venus_gateway.bluetti.parser import normalize_decoded_state
 from bluetti_venus_gateway.bluetti.polling import build_poll_profile
 from bluetti_venus_gateway.bluetti.polling import due_polls
+from bluetti_venus_gateway.bluetti.polling import PollSpec
 from bluetti_venus_gateway.config import DEFAULT_CONFIG_PATH
 from bluetti_venus_gateway.config import ConfigError
 from bluetti_venus_gateway.config import GatewayConfig
@@ -101,7 +104,7 @@ def run_live_collector(config: GatewayConfig) -> None:
 
 
 class LiveMqttCollector:
-    def __init__(self, *, config: GatewayConfig, mqtt_module: object, context: object, poll_specs: list[object]) -> None:
+    def __init__(self, *, config: GatewayConfig, mqtt_module: object, context: object, poll_specs: list[PollSpec]) -> None:
         self._config = config
         self._mqtt = mqtt_module
         self._context = context
@@ -109,22 +112,32 @@ class LiveMqttCollector:
         self._decoded_state: dict[str, object] = {}
         self._last_observed_at: datetime | None = None
         self._connected = False
+        self._cycle = 0
+        self._poll_queue: deque[PollSpec] = deque()
+        self._inflight_poll: PollSpec | None = None
+        self._inflight_started_monotonic: float | None = None
+        self._next_cycle_monotonic = time.monotonic()
+        self._next_snapshot_write_monotonic = time.monotonic()
+        self._poll_lock = threading.RLock()
         self._client = self._build_client()
 
     def run(self) -> None:
         self._client.connect(self._context.host, self._context.port, keepalive=60)
         self._client.loop_start()
-        cycle = 0
+        self._next_cycle_monotonic = time.monotonic()
+        self._next_snapshot_write_monotonic = time.monotonic()
         try:
             while True:
                 if int(time.time()) >= self._context.refresh_after_epoch:
                     LOGGER.info("Refreshing BLUETTI auth context")
                     return
+                now = time.monotonic()
                 if self._connected:
-                    cycle += 1
-                    self._publish_due_polls(cycle)
-                self._write_latest_snapshot()
-                time.sleep(self._config.poll_interval_seconds)
+                    self._drive_polling(now)
+                if now >= self._next_snapshot_write_monotonic:
+                    self._write_latest_snapshot()
+                    self._next_snapshot_write_monotonic = now + self._config.poll_interval_seconds
+                time.sleep(min(1.0, max(0.1, self._config.poll_interval_seconds / 5.0)))
         finally:
             self._client.loop_stop()
             self._client.disconnect()
@@ -164,18 +177,67 @@ class LiveMqttCollector:
         LOGGER.warning("BLUETTI MQTT disconnected rc=%s", rc)
 
     def _on_message(self, _client, _userdata, message) -> None:
-        decoded = decode_bluetti_payload(message.payload)
+        expected_addr = self._inflight_addr()
+        decoded = decode_bluetti_payload(message.payload, expected_addr=expected_addr)
         if not decoded.get("messageType"):
             return
-        self._decoded_state = merge_decoded_state(self._decoded_state, decoded)
-        self._last_observed_at = datetime.now(timezone.utc)
-        self._write_latest_snapshot()
+        with self._poll_lock:
+            self._decoded_state = merge_decoded_state(self._decoded_state, decoded)
+            self._last_observed_at = datetime.now(timezone.utc)
+            inflight_addr = self._inflight_addr()
+            matched_inflight = inflight_addr is not None and self._decoded_addr(decoded) == inflight_addr
+            self._write_latest_snapshot()
+            self._next_snapshot_write_monotonic = time.monotonic() + self._config.poll_interval_seconds
+            if matched_inflight:
+                self._inflight_poll = None
+                self._inflight_started_monotonic = None
+                self._publish_next_queued_poll(time.monotonic())
 
-    def _publish_due_polls(self, cycle: int) -> None:
-        for spec in due_polls(self._poll_specs, cycle):
-            modbus_cmd = build_modbus_read(spec.addr, spec.length, self._context.modbus_slave)
-            payload_hex = build_mqtt_payload(modbus_cmd, spec.addr, self._config.mqtt_payload_format)
-            self._client.publish(self._context.publish_topic, bytes.fromhex(payload_hex), qos=0)
+    def _drive_polling(self, now: float) -> None:
+        with self._poll_lock:
+            if self._inflight_poll and self._inflight_started_monotonic is not None:
+                elapsed = now - self._inflight_started_monotonic
+                if elapsed >= self._config.poll_interval_seconds:
+                    LOGGER.warning(
+                        "Timed out waiting %.1fs for BLUETTI poll addr=%s; continuing with next queued poll",
+                        elapsed,
+                        self._inflight_poll.addr,
+                    )
+                    self._inflight_poll = None
+                    self._inflight_started_monotonic = None
+                    self._publish_next_queued_poll(now)
+                return
+            if self._poll_queue:
+                self._publish_next_queued_poll(now)
+                return
+            if now < self._next_cycle_monotonic:
+                return
+            self._cycle += 1
+            self._poll_queue.extend(due_polls(self._poll_specs, self._cycle))
+            self._next_cycle_monotonic = now + self._config.poll_interval_seconds
+            self._publish_next_queued_poll(now)
+
+    def _publish_next_queued_poll(self, now: float) -> None:
+        if self._inflight_poll or not self._poll_queue:
+            return
+        spec = self._poll_queue.popleft()
+        self._inflight_poll = spec
+        self._inflight_started_monotonic = now
+        modbus_cmd = build_modbus_read(spec.addr, spec.length, self._context.modbus_slave)
+        payload_hex = build_mqtt_payload(modbus_cmd, spec.addr, self._config.mqtt_payload_format)
+        self._client.publish(self._context.publish_topic, bytes.fromhex(payload_hex), qos=0)
+
+    def _inflight_addr(self) -> int | None:
+        with self._poll_lock:
+            return self._inflight_poll.addr if self._inflight_poll else None
+
+    @staticmethod
+    def _decoded_addr(decoded: dict[str, object]) -> int | None:
+        modbus = decoded.get("modbus")
+        if not isinstance(modbus, dict):
+            return None
+        requested_addr = modbus.get("requestedAddr")
+        return requested_addr if isinstance(requested_addr, int) else None
 
     def _write_latest_snapshot(self) -> None:
         if not self._decoded_state:
