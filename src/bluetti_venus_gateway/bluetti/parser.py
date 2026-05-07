@@ -56,16 +56,6 @@ PACK_MAIN_SIGNAL_MAP = {
     "packCnts": "pack_count",
 }
 
-PACK_ITEM_SIGNAL_MAP = {
-    "packID": "pack_id",
-    "packSN": "pack_sn",
-    "packSoc": "pack_soc",
-    "packSoh": "pack_soh",
-    "voltage": "pack_voltage_v",
-    "current": "pack_current_a",
-}
-
-
 def normalize_decoded_state(decoded_state: dict[str, Any]) -> dict[str, Any]:
     snapshot: dict[str, Any] = {}
     _copy_mapped(decoded_state.get("homeInfo") or {}, HOME_SIGNAL_MAP, snapshot)
@@ -73,7 +63,6 @@ def normalize_decoded_state(decoded_state: dict[str, Any]) -> dict[str, Any]:
     _copy_mapped(decoded_state.get("invLoadInfo") or {}, LOAD_SIGNAL_MAP, snapshot)
     _copy_mapped(decoded_state.get("invInvInfo") or {}, INVERTER_SIGNAL_MAP, snapshot)
     _copy_mapped(decoded_state.get("packMainInfo") or {}, PACK_MAIN_SIGNAL_MAP, snapshot)
-    _copy_mapped(decoded_state.get("packItemInfo") or {}, PACK_ITEM_SIGNAL_MAP, snapshot)
 
     grid = decoded_state.get("invGridInfo") or {}
     grid_phase = _first_phase(grid)
@@ -276,7 +265,7 @@ def parse_pack_main_info_data(data: bytes) -> dict[str, Any]:
     result: dict[str, Any] = {
         "totalSOC": _u16be(data, 0) if len(data) >= 2 else None,
         "packCnts": _u16be(data, 2) if len(data) >= 4 else None,
-        "averageTemp": _temperature_c(data, 4) if len(data) >= 6 else None,
+        "averageTemp": _u16be(data, 14) - 40 if len(data) >= 16 else None,
         "totalVoltage": _u16be(data, 6) / 10.0 if len(data) >= 8 else None,
         "totalCurrent": _s16be(data, 8) / 10.0 if len(data) >= 10 else None,
         "totalSOH": _u16be(data, 10) if len(data) >= 12 else None,
@@ -340,13 +329,6 @@ def _u32_reg(data: bytes, offset: int) -> int:
 def _s32_reg(data: bytes, offset: int) -> int:
     swapped = data[offset + 2:offset + 4] + data[offset:offset + 2]
     return int.from_bytes(swapped, "big", signed=True)
-
-
-def _temperature_c(data: bytes, offset: int) -> float:
-    raw_value = _s16be(data, offset)
-    if abs(raw_value) >= 100:
-        return raw_value / 10.0
-    return float(raw_value)
 
 
 def _ascii_swapped(data: bytes) -> str:

@@ -46,7 +46,7 @@ Expected services after BLUETTI credentials are configured:
 - `com.victronenergy.inverter.ep760_32`
 
 Pack diagnostics are enabled by default in new configs with `BLUETTI_ENABLE_PACK_DIAGNOSTICS=1`.
-They poll BLUETTI registers `6000` and `6100` so Venus can receive battery temperature on
+They poll BLUETTI register `6000` so Venus can receive battery temperature on
 `/Dc/0/Temperature`. Optional temperature alarm thresholds can be set with
 `BLUETTI_BATTERY_LOW_TEMP_ALARM_C` and `BLUETTI_BATTERY_HIGH_TEMP_ALARM_C`; empty values leave those
 alarms disabled.
